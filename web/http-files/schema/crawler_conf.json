@@ -1,0 +1,52 @@
+{
+  "title": "crawler_conf",
+  "type": "object",
+  "id": "crawler_conf",
+  "format": "grid",
+  "properties": {
+    "crawler_type": {
+      "type": "string",
+      "options": {"grid_columns": 2},
+      "enum": [
+        "navigation",
+        "url_set"
+      ]
+    },
+    "crawler_name": {
+      "type": "string",
+      "options": {"grid_columns": 2},
+      "minLength": 4
+    },
+    "start_parser_name": {
+      "options": {"grid_columns": 2},
+      "type": "string"
+    },
+    "crawler_desp": {
+      "options": {"grid_columns": 6},
+      "type": "string"
+    },
+    "es_uri": {
+      "options": {"grid_columns": 12},
+      "type": "string",
+      "format": "url"
+    },
+    "start_urls": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "format": "url"
+      }
+    },
+    "parse_confs": {
+      "title": "parse_confs",
+      "type": "object",
+      "options": {"disable_properties": false},
+      "patternProperties": {
+        ".+": {
+          "$ref": "./schema/parse_conf.json"
+        }
+      }
+    }
+  }
+}

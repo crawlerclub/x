@@ -1,0 +1,91 @@
+{
+  "crawler_name": "www.newsmth.net_crawler",
+  "crawler_type": "focus",
+  "crawler_desp": "水木社区",
+  "start_urls": [
+    "http://www.newsmth.net/nForum/section/1" 
+  ],
+  "start_parser_name": "section",
+  "parse_confs": {
+    "section": {
+      "parser_name": "section",
+      "no_default_fields": false,
+      "example_url": "http://www.newsmth.net/nForum/section/1",
+      "rules": {
+        "root": [
+          {
+            "rule_type": "dom",
+            "item_key": "section",
+            "xpath": "//tr[contains(td[2]/text(),'[二级目录]')]/td[1]/a"
+          },
+          {
+            "rule_type": "dom",
+            "item_key": "board",
+            "xpath": "//tr[not(contains(td[2]/text(),'[二级目录]'))]/td[1]/a"
+          }
+        ],
+        "section": [
+          { "rule_type": "url", "item_key": "section", "xpath": "./@href" },
+          { "rule_type": "string", "item_key": "section_name", "xpath": "./text()",
+            "js": "function process(r) {return {\"name\":r};}"
+          }
+        ],
+        "board": [
+          { "rule_type": "url", "item_key": "board", "xpath": "./@href" },
+          { "rule_type": "string", "item_key": "board_name", "xpath": "./text()" }
+        ]
+      }
+    },
+    "board": {
+      "parser_name": "board",
+      "no_default_fields": false,
+      "example_url": "http://www.newsmth.net/nForum/board/Universal",
+      "rules": {
+        "root": [
+          {
+            "rule_type": "url",
+            "item_key": "article",
+            "xpath": "//tr/td[2]/a/@href"
+          },
+          {
+            "rule_type": "url",
+            "item_key": "board",
+            "xpath": "//div[@class='t-pre']//li[@class='page-select']/following-sibling::li[1]/a/@href"
+          }
+        ]
+      }
+    },
+    "article": {
+      "parser_name": "article",
+      "no_default_fields": false,
+      "example_url": "http://www.newsmth.net/nForum/article/Universal/1429291",
+      "rules": {
+        "root": [
+          {
+            "rule_type": "url",
+            "item_key": "article",
+            "xpath": "//div[@class='t-pre']//li[@class='page-select']/following-sibling::li[1]/a/@href"
+          },
+          {
+            "rule_type": "dom",
+            "item_key": "posts",
+            "xpath": "//table[contains(concat(' ', @class, ' '), ' article ')]"
+          }
+        ],
+        "posts": [
+          {
+            "rule_type": "html",
+            "item_key": "content",
+            "xpath": ".//td[contains(concat(' ', @class, ' '), ' a-content ')]"
+          },
+          {
+            "rule_type": "string",
+            "item_key": "floor",
+            "xpath": ".//span[contains(@class, 'a-pos')]",
+            "regex": "(\\d+)"
+          }
+        ]
+      }
+    }
+  }
+}
