@@ -60,6 +60,9 @@ func Download(requestInfo *types.HttpRequest) *types.HttpResponse {
 	client.Transport = &transport
 
 	req, err := http.NewRequest(requestInfo.Method, requestInfo.Url, strings.NewReader(requestInfo.PostData))
+	if requestInfo.Method == "POST" {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
 	if err != nil {
 		responseInfo.Error = err
 		return responseInfo
