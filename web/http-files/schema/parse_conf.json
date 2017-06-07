@@ -18,13 +18,17 @@
       ]
     },
     "example_url": {
-      "options": { "grid_columns": 6 },
+      "options": { "grid_columns": 4 },
       "type": "string",
       "format": "url"
     },
     "no_default_fields": {
       "options": { "grid_columns": 2 },
       "type": "boolean"
+    },
+    "revisit_interval": {
+      "options": { "grid_columns": 2 },
+      "type": "integer"
     },
     "rules": {
       "type": "object",

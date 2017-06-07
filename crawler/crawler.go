@@ -7,9 +7,11 @@ import (
 	"github.com/crawlerclub/x/downloader"
 	"github.com/crawlerclub/x/parser"
 	"github.com/crawlerclub/x/types"
+	"github.com/tkuchiki/parsetime"
 	"golang.org/x/net/context"
 	"gopkg.in/olivere/elastic.v5"
 	"io/ioutil"
+	"time"
 )
 
 var (
@@ -64,7 +66,7 @@ func (self *Crawler) GetStartTasks() ([]*types.Task, error) {
 	}
 	var tasks []*types.Task
 	for _, url := range self.Conf.StartUrls {
-		tasks = append(tasks, &types.Task{Url: url, ParserName: self.Conf.StartParserName})
+		tasks = append(tasks, &types.Task{Url: url, CrawlerName: self.Conf.CrawlerName, ParserName: self.Conf.StartParserName})
 	}
 	return tasks, nil
 }
@@ -82,7 +84,33 @@ func (self *Crawler) Process(task *types.Task) ([]types.Task, []map[string]inter
 		if resp.Error != nil {
 			return nil, nil, resp.Error
 		}
-		return parser.Parse(resp.Content, resp.Url, &urlParser)
+		tasks, items, err := parser.Parse(resp.Content, resp.Url, &urlParser)
+
+		lastModified := time.Now().Unix()
+		for _, item := range items {
+			if value, ok := item["last_modified_"]; ok {
+				p, err := parsetime.NewParseTime()
+				if err != nil {
+					return nil, nil, err
+				}
+				t, err := p.Parse(value.(string))
+				if err != nil {
+					return nil, nil, err
+				}
+				lastModified = t.Unix()
+			}
+			break
+		}
+		if lastModified <= task.LastAccessTime {
+			// stop generating tasks, since no new content found
+			tasks = nil
+		}
+
+		for i, _ := range tasks {
+			tasks[i].CrawlerName = self.Conf.CrawlerName
+		}
+		//fmt.Println(tasks)
+		return tasks, items, err
 	} else {
 		return nil, nil, errors.New(fmt.Sprintf("No ParseConf for %s", task.ParserName))
 	}

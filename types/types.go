@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"fmt"
 )
 
 type ParseRule struct {
@@ -22,6 +23,12 @@ type ParseConf struct {
 	ExampleUrl      string                 `json:"example_url" bson:"example_url"`
 	Rules           map[string][]ParseRule `json:"rules" bson:"rules"` // RuleName to ParseRules
 	PostProcessor   string                 `json:"post_processor" bson:"post_processor"`
+	RevisitInterval int64                  `json:"revisit_interval" bson:"revisit_interval"`
+}
+
+func (this ParseConf) String() string {
+	return fmt.Sprintf("{ParserType:%s, ParserName:%s, RevisitInterval:%d}",
+		this.ParserType, this.ParserName, this.RevisitInterval)
 }
 
 type CrawlerConf struct {
@@ -65,13 +72,17 @@ func (conf *CrawlerConf) IsValid() (bool, error) {
 	return true, nil
 }
 
-//type Item map[string]interface{}
-
 type Task struct {
-	// crawler_name:parser_name
-	ParserName string `json:"parser_name" bson:"parser_name"`
-	Url        string `json:"url" bson:"url"`
-	Data       string `json:"data" bson:"data"`
+	CrawlerName    string `json:"crawler_name" bson:"crawler_name"`
+	ParserName     string `json:"parser_name" bson:"parser_name"`
+	Url            string `json:"url" bson:"url"`
+	Data           string `json:"data" bson:"data"`
+	LastAccessTime int64  `json:"last_access_time" bson:"last_access_time"`
+}
+
+func (this Task) String() string {
+	return fmt.Sprintf("{CrawlerName:%s, ParserName:%s, Url:%s, LastAccessTime:%d}",
+		this.CrawlerName, this.ParserName, this.Url, this.LastAccessTime)
 }
 
 type HttpRequest struct {

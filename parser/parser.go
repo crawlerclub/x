@@ -2,7 +2,6 @@ package parser
 
 import (
 	"errors"
-	"fmt"
 	"github.com/crawlerclub/x/types"
 	"github.com/lestrrat/go-libxml2"
 	t "github.com/lestrrat/go-libxml2/types"
@@ -138,7 +137,7 @@ func parseNode(node interface{}, rules []types.ParseRule, pageUrl string) ([]*DO
 				}
 			}
 
-			// string or url
+			// string or url, treat tasks as items too
 			if _, ok := retItems[rule.ItemKey]; !ok {
 				if len(vals) == 1 {
 					retItems[rule.ItemKey] = vals[0]
@@ -231,9 +230,9 @@ func Parse(page []byte, pageUrl string, parseConf *types.ParseConf) ([]types.Tas
 	}
 	if !parseConf.NoDefaultFields {
 		for _, v := range retItems {
-			v["_from_url"] = pageUrl
-			v["_from_parser_name"] = parseConf.ParserName
-			v["_crawl_time"] = time.Now().Format("2006-01-02 15:04:05")
+			v["from_url_"] = pageUrl
+			v["from_parser_name_"] = parseConf.ParserName
+			v["crawl_time_"] = time.Now().Format("2006-01-02 15:04:05")
 		}
 	}
 
@@ -253,7 +252,6 @@ func Parse(page []byte, pageUrl string, parseConf *types.ParseConf) ([]types.Tas
 		if err != nil {
 			return nil, nil, err
 		}
-		fmt.Println(s)
 		value, ok := s.([]map[string]interface{})
 		if ok && len(value) > 0 {
 			retItems = value
