@@ -169,7 +169,7 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 			item, err := self.TaskQueue.Dequeue()
 			if err != nil {
 				glog.Error(err)
-				time.Sleep(1 * time.Second)
+				time.Sleep(5 * time.Second)
 				continue
 			}
 			var task types.Task
@@ -194,7 +194,8 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 					continue
 				}
 				// remove task from RunningDB
-				err = self.RunningDB.Delete([]byte(task.Url), nil)
+				key := time.Unix(now, 0).Format("20060102030405") + ":" + task.Url
+				err = self.RunningDB.Delete([]byte(key), nil)
 				if err != nil {
 					glog.Error(err)
 				}
@@ -219,7 +220,7 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 			} else {
 				glog.Error("No crawler named: ", task.CrawlerName)
 			}
-			time.Sleep(1 * time.Second)
+			//time.Sleep(1 * time.Second)
 		}
 	}
 }
