@@ -158,7 +158,7 @@ func parseNode(node interface{}, rules []types.ParseRule, pageUrl string) ([]*DO
 	return retDOMs, retUrls, retItems, nil
 }
 
-func Parse(page []byte, pageUrl string, parseConf *types.ParseConf) ([]types.Task, []map[string]interface{}, error) {
+func Parse(page, pageUrl string, parseConf *types.ParseConf) ([]types.Task, []map[string]interface{}, error) {
 	if parseConf == nil {
 		return nil, nil, errors.New("parse conf is nil")
 	}
@@ -167,7 +167,7 @@ func Parse(page []byte, pageUrl string, parseConf *types.ParseConf) ([]types.Tas
 	}
 	conf := parseConf.Rules
 
-	root, err := libxml2.ParseHTML(page)
+	root, err := libxml2.ParseHTMLString(page, "utf-8")
 	if err != nil {
 		return nil, nil, err
 	}

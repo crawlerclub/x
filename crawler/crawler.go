@@ -79,12 +79,16 @@ func (self *Crawler) Process(task *types.Task) ([]types.Task, []map[string]inter
 		return nil, nil, ErrEmptyCrawlerConf
 	}
 	if urlParser, ok := self.Conf.ParseConfs[task.ParserName]; ok {
-		req := &types.HttpRequest{Url: task.Url, Platform: "pc"}
+		req := &types.HttpRequest{Url: task.Url, Platform: "pc", Timeout: 60}
 		resp := downloader.Download(req)
 		if resp.Error != nil {
 			return nil, nil, resp.Error
 		}
-		tasks, items, err := parser.Parse(resp.Content, resp.Url, &urlParser)
+		//fmt.Println(resp.Text)
+		tasks, items, err := parser.Parse(resp.Text, resp.Url, &urlParser)
+		if err != nil {
+			return nil, nil, err
+		}
 
 		lastModified := time.Now().Unix()
 		for _, item := range items {

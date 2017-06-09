@@ -10,7 +10,7 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	conf, _ := ioutil.ReadFile("../cmd/www.newsmth.net.json")
+	conf, _ := ioutil.ReadFile("./www.newsmth.net.json")
 
 	var crawlerConf types.CrawlerConf
 	err := json.Unmarshal(conf, &crawlerConf)
@@ -19,7 +19,9 @@ func TestParse(t *testing.T) {
 	}
 	urlConf := crawlerConf.ParseConfs["article"]
 	//pageUrl := urlConf.ExampleUrl
-	pageUrl := "http://www.newsmth.net/nForum/article/Orienteering/59230"
+	//pageUrl := "http://www.newsmth.net/nForum/article/Orienteering/59230"
+	//pageUrl := "http://www.newsmth.net/nForum/article/Browsers/33416"
+	pageUrl := "http://www.newsmth.net/nForum/article/Taiwan/50328"
 	requestInfo := &types.HttpRequest{
 		Url:      pageUrl,
 		Method:   "GET",
@@ -34,7 +36,8 @@ func TestParse(t *testing.T) {
 	}
 	fmt.Println(responseInfo.Encoding)
 
-	retUrls, retItems, err := Parse(responseInfo.Content, pageUrl, &urlConf)
+	//fmt.Println(responseInfo.Text)
+	retUrls, retItems, err := Parse(responseInfo.Text, pageUrl, &urlConf)
 	if err != nil {
 		t.Fatal(err)
 	}
