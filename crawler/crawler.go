@@ -79,13 +79,17 @@ func (self *Crawler) Process(task *types.Task) ([]types.Task, []map[string]inter
 		return nil, nil, ErrEmptyCrawlerConf
 	}
 	if urlParser, ok := self.Conf.ParseConfs[task.ParserName]; ok {
+		uParser := parser.GetParser(urlParser.ParserType)
+		if uParser == nil {
+			return nil, nil, errors.New(fmt.Sprintf("no parser_type %s found!", urlParser.ParserType))
+		}
 		req := &types.HttpRequest{Url: task.Url, Platform: "pc", Timeout: 60}
 		resp := downloader.Download(req)
 		if resp.Error != nil {
 			return nil, nil, resp.Error
 		}
 		//fmt.Println(resp.Text)
-		tasks, items, err := parser.Parse(resp.Text, resp.Url, &urlParser)
+		tasks, items, err := uParser.Parse(resp.Text, resp.Url, &urlParser)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -113,7 +117,6 @@ func (self *Crawler) Process(task *types.Task) ([]types.Task, []map[string]inter
 		for i, _ := range tasks {
 			tasks[i].CrawlerName = self.Conf.CrawlerName
 		}
-		//fmt.Println(tasks)
 		return tasks, items, err
 	} else {
 		return nil, nil, errors.New(fmt.Sprintf("No ParseConf for %s", task.ParserName))

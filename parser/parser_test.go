@@ -37,7 +37,7 @@ func TestParse(t *testing.T) {
 	fmt.Println(responseInfo.Encoding)
 
 	//fmt.Println(responseInfo.Text)
-	retUrls, retItems, err := Parse(responseInfo.Text, pageUrl, &urlConf)
+	retUrls, retItems, err := GetParser("html").Parse(responseInfo.Text, pageUrl, &urlConf)
 	if err != nil {
 		t.Fatal(err)
 	}

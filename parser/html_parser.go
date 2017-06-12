@@ -10,7 +10,28 @@ import (
 	"time"
 )
 
-func parseNodeByRule(node interface{}, rule types.ParseRule, pageUrl string) ([]interface{}, error) {
+type HtmlParser struct {
+	Name string
+}
+
+type DOMNode struct {
+	Name string // always start with name root
+	Node interface{}
+	Item map[string]interface{}
+}
+
+var (
+	ErrEmptyXpath      = errors.New("empty xpath of node conf")
+	ErrInvalidRuleType = errors.New("invalid rule_type of node conf")
+	ErrEmptyRuleType   = errors.New("empty rule_type of node conf")
+	ErrEmptyItemKey    = errors.New("empty item_key of node conf")
+)
+
+func (parser HtmlParser) String() string {
+	return parser.Name
+}
+
+func (parser HtmlParser) parseNodeByRule(node interface{}, rule types.ParseRule, pageUrl string) ([]interface{}, error) {
 	if len(rule.RuleType) == 0 {
 		return nil, ErrEmptyRuleType
 	}
@@ -92,7 +113,7 @@ func parseNodeByRule(node interface{}, rule types.ParseRule, pageUrl string) ([]
 	return ret, err
 }
 
-func parseNode(node interface{}, rules []types.ParseRule, pageUrl string) ([]*DOMNode, []types.Task, map[string]interface{}, error) {
+func (parser HtmlParser) parseNode(node interface{}, rules []types.ParseRule, pageUrl string) ([]*DOMNode, []types.Task, map[string]interface{}, error) {
 	var retDOMs []*DOMNode
 	var retUrls []types.Task
 	retItems := make(map[string]interface{})
@@ -148,7 +169,7 @@ func parseNode(node interface{}, rules []types.ParseRule, pageUrl string) ([]*DO
 	return retDOMs, retUrls, retItems, nil
 }
 
-func Parse(page, pageUrl string, parseConf *types.ParseConf) ([]types.Task, []map[string]interface{}, error) {
+func (parser HtmlParser) Parse(page, pageUrl string, parseConf *types.ParseConf) ([]types.Task, []map[string]interface{}, error) {
 	if parseConf == nil {
 		return nil, nil, errors.New("parse conf is nil")
 	}
