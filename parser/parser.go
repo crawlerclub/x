@@ -34,6 +34,9 @@ func parseNodeByRule(node interface{}, rule types.ParseRule, pageUrl string) ([]
 	var ret []interface{}
 
 	nodes, err := node.(t.Node).Find(rule.Xpath)
+	// zliu
+	defer nodes.Free()
+
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +175,7 @@ func Parse(page, pageUrl string, parseConf *types.ParseConf) ([]types.Task, []ma
 		return nil, nil, err
 	}
 	defer root.Free()
+
 	var domList []*DOMNode
 	rootNode := &DOMNode{Name: "root", Node: interface{}(root), Item: make(map[string]interface{})}
 	domList = append(domList, rootNode)
@@ -186,6 +190,9 @@ func Parse(page, pageUrl string, parseConf *types.ParseConf) ([]types.Task, []ma
 		domNode := domList[0].Node
 		parentItems := domList[0].Item
 		domList = domList[1:]
+
+		domNode.(t.Node).MakeMortal()
+		//defer domNode.(t.Node).AutoFree()
 
 		var rules []types.ParseRule // get parse_rule via domName
 		var ok bool
