@@ -2,6 +2,7 @@ package downloader
 
 import (
 	"bytes"
+	"compress/flate"
 	"compress/gzip"
 	"compress/zlib"
 	"crypto/tls"
@@ -10,6 +11,7 @@ import (
 	"github.com/axgle/mahonia"
 	"github.com/crawlerclub/x/types"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -86,29 +88,11 @@ func Download(requestInfo *types.HttpRequest) *types.HttpResponse {
 		return responseInfo
 	}
 
-	var reader io.ReadCloser
-	switch resp.Header.Get("Content-Encoding") {
-	case "gzip":
-		if reader, err = gzip.NewReader(resp.Body); err != nil {
-			responseInfo.Error = err
-			return responseInfo
-		}
-		defer reader.Close()
-	case "deflate":
-		if reader, err = zlib.NewReader(resp.Body); err != nil {
-			responseInfo.Error = err
-			return responseInfo
-		}
-		defer reader.Close()
-	default:
-		reader = resp.Body
-	}
-
 	var readLen int64 = 0
 	respBuf := bytes.NewBuffer([]byte{})
 	for {
 		readData := make([]byte, 4096)
-		length, err := reader.Read(readData)
+		length, err := resp.Body.Read(readData)
 		respBuf.Write(readData[:length])
 		readLen += int64(length)
 		if err != nil {
@@ -119,7 +103,36 @@ func Download(requestInfo *types.HttpRequest) *types.HttpResponse {
 			return responseInfo
 		}
 	}
-	responseInfo.Content = respBuf.Bytes()
+	content := respBuf.Bytes()
+
+	switch resp.Header.Get("Content-Encoding") {
+	case "gzip":
+		var reader io.ReadCloser
+		contentReader := bytes.NewReader(content)
+		if reader, err = gzip.NewReader(contentReader); err != nil {
+			responseInfo.Error = err
+			return responseInfo
+		}
+		defer reader.Close()
+		responseInfo.Content, _ = ioutil.ReadAll(reader)
+	case "deflate":
+		var reader io.ReadCloser
+		contentReader := bytes.NewReader(content)
+		if reader, err = zlib.NewReader(contentReader); err != nil {
+			if err == zlib.ErrHeader {
+				// raw defalte, no zlib header
+				reader = flate.NewReader(bytes.NewReader(content))
+			} else {
+				responseInfo.Error = err
+				return responseInfo
+			}
+		}
+		defer reader.Close()
+		responseInfo.Content, _ = ioutil.ReadAll(reader)
+	default:
+		responseInfo.Content = content
+	}
+
 	var encoding string
 	encoding, err = GuessEncoding(responseInfo.Content)
 	if err != nil {
