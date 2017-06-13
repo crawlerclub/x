@@ -14,8 +14,12 @@
       ]
     },
     "item_key": {
-      "options": { "grid_columns": 10 },
+      "options": { "grid_columns": 7 },
       "type": "string"
+    },
+    "is_seed_url": {
+      "options": { "grid_columns": 3 },
+      "type": "boolean"
     },
     "xpath": {
       "options": { "grid_columns": 12 },
@@ -28,8 +32,7 @@
     "js": {
       "options": { "grid_columns": 12 },
       "type": "string",
-      "format": "javascript",
-      "default": "function process(r) {\n  return r;\n}"
+      "format": "javascript"
     }
   }
 }

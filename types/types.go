@@ -10,10 +10,11 @@ type ParseRule struct {
 	RuleType string `json:"rule_type" bson:"rule_type"`
 
 	// when RuleType is dom, ItemKey stores the next RuleName
-	ItemKey string `json:"item_key" bson:"item_key"`
-	Xpath   string `json:"xpath" bson:"xpath"`
-	Regex   string `json:"regex" bson:"regex"`
-	Js      string `json:"js" bson:"js"`
+	ItemKey   string `json:"item_key" bson:"item_key"`
+	IsSeedUrl bool   `json:"is_seed_url" bson:"is_seed_url"`
+	Xpath     string `json:"xpath" bson:"xpath"`
+	Regex     string `json:"regex" bson:"regex"`
+	Js        string `json:"js" bson:"js"`
 }
 
 type ParseConf struct {
