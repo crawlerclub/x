@@ -115,7 +115,7 @@ func (self *Crawler) Process(task *types.Task) ([]types.Task, []map[string]inter
 		}
 
 		for i, _ := range tasks {
-			tasks[i].CrawlerName = self.Conf.CrawlerName
+			tasks[i].CrawlerName = self.Conf.CrawlerName // set CrawlerName for tasks
 		}
 		return tasks, items, err
 	} else {

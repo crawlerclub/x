@@ -143,6 +143,7 @@ func (parser HtmlParser) parseNode(node interface{}, rules []types.ParseRule, pa
 						retUrls = append(retUrls, types.Task{
 							ParserName: rule.ItemKey,
 							Url:        u,
+							IsSeedUrl:  rule.IsSeedUrl, // 20170616
 						})
 					}
 				}

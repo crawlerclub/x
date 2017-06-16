@@ -76,6 +76,7 @@ func (conf *CrawlerConf) IsValid() (bool, error) {
 type Task struct {
 	CrawlerName    string `json:"crawler_name" bson:"crawler_name"`
 	ParserName     string `json:"parser_name" bson:"parser_name"`
+	IsSeedUrl      bool   `json:"is_seed_url" bson:"is_seed_url"`
 	Url            string `json:"url" bson:"url"`
 	Data           string `json:"data" bson:"data"`
 	LastAccessTime int64  `json:"last_access_time" bson:"last_access_time"`
