@@ -3,7 +3,6 @@ package parser
 import (
 	"errors"
 	"github.com/crawlerclub/x/types"
-	"github.com/lestrrat/go-libxml2"
 	t "github.com/lestrrat/go-libxml2/types"
 	"github.com/robertkrimen/otto"
 	"strings"
@@ -179,7 +178,7 @@ func (parser HtmlParser) Parse(page, pageUrl string, parseConf *types.ParseConf)
 	}
 	conf := parseConf.Rules
 
-	root, err := libxml2.ParseHTMLString(page, "utf-8")
+	root, err := ParseHTMLString(page, "utf-8")
 	if err != nil {
 		return nil, nil, err
 	}
