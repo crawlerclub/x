@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+type StoreItem interface {
+	Id() string
+}
+
 type ParseRule struct {
 	// four RuleTypes: url, dom, string, html
 	RuleType string `json:"rule_type" bson:"rule_type"`
@@ -43,6 +47,14 @@ type CrawlerConf struct {
 	EsUri           string               `json:"es_uri" bson:"es_uri"`
 }
 
+func (self CrawlerConf) Type() string {
+	return "crawler"
+}
+
+func (self CrawlerConf) Id() string {
+	return self.CrawlerName
+}
+
 var (
 	ErrEmptyCrawlerName       = errors.New("empty crawler_name of crawler conf")
 	ErrUnSupportedCrawlerType = errors.New("unsupported crawler_type of crawler conf")
@@ -74,12 +86,21 @@ func (conf *CrawlerConf) IsValid() (bool, error) {
 }
 
 type Task struct {
-	CrawlerName    string `json:"crawler_name" bson:"crawler_name"`
-	ParserName     string `json:"parser_name" bson:"parser_name"`
-	IsSeedUrl      bool   `json:"is_seed_url" bson:"is_seed_url"`
-	Url            string `json:"url" bson:"url"`
-	Data           string `json:"data" bson:"data"`
-	LastAccessTime int64  `json:"last_access_time" bson:"last_access_time"`
+	CrawlerName     string `json:"crawler_name" bson:"crawler_name"`
+	ParserName      string `json:"parser_name" bson:"parser_name"`
+	IsSeedUrl       bool   `json:"is_seed_url" bson:"is_seed_url"`
+	Url             string `json:"url" bson:"url"`
+	Data            string `json:"data" bson:"data"`
+	LastAccessTime  int64  `json:"last_access_time" bson:"last_access_time"`
+	RevisitInterval int64  `json:"revisit_interval" bson:"revisit_interval"`
+}
+
+func (self Task) Type() string {
+	return "task"
+}
+
+func (self Task) Id() string {
+	return self.Url
 }
 
 func (this Task) String() string {

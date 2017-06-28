@@ -49,6 +49,14 @@
         startval: starting_value
       });
 
+    function submit() {
+        console.log(editor.getValue());
+        console.log(JSON.stringify(editor.getValue()));
+        $.post("/crawlerconf", JSON.stringify(editor.getValue()), function(data) {
+          console.log(data);
+        }, "json");
+    }
+
       // Hook up the submit button to log to the console
       document.getElementById('submit').addEventListener('click', function() {
         // Get the value from the editor
