@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/crawlerclub/x/downloader"
+	"github.com/crawlerclub/x/ds"
 	"github.com/crawlerclub/x/parser"
 	"github.com/crawlerclub/x/types"
 	"github.com/tkuchiki/parsetime"
@@ -15,15 +16,16 @@ import (
 )
 
 var (
-	ErrEmptyCrawlerConf  = errors.New("empty CrawlerConf")
-	ErrNilTask           = errors.New("nil Task")
-	ErrNilItem           = errors.New("nil Item")
-	ErrInvalidParserName = errors.New("ParserName not in crawler_name:parser_name format")
+	ErrEmptyCrawlerConf = errors.New("empty CrawlerConf")
+	ErrNilTask          = errors.New("nil Task")
+	ErrNilItem          = errors.New("nil Item")
+	ErrNilTaskQueue     = errors.New("nil TaskQueue")
 )
 
 type Crawler struct {
-	Conf   *types.CrawlerConf
-	client *elastic.Client
+	Conf      *types.CrawlerConf
+	TaskQueue *ds.Queue
+	es        *elastic.Client
 }
 
 func (self *Crawler) LoadConfFromBytes(str []byte) error {
@@ -36,8 +38,16 @@ func (self *Crawler) LoadConfFromBytes(str []byte) error {
 	if !ok {
 		return err
 	}
+	return self.InitEs()
+}
+
+func (self *Crawler) InitEs() error {
+	if self.Conf == nil {
+		return errors.New("CrawlerConf is nil")
+	}
+	var err error
 	if len(self.Conf.EsUri) > 0 {
-		self.client, err = elastic.NewClient(
+		self.es, err = elastic.NewClient(
 			elastic.SetURL(self.Conf.EsUri),
 			elastic.SetMaxRetries(10))
 		if err != nil {
@@ -56,19 +66,47 @@ func (self *Crawler) LoadConfFromFile(file string) error {
 	return err
 }
 
-func (self *Crawler) GetStartTasks() ([]*types.Task, error) {
+func (self *Crawler) InitTaskQueue(dir string) error {
 	if self.Conf == nil {
-		return nil, ErrEmptyCrawlerConf
+		return ErrEmptyCrawlerConf
+	}
+	if ok, err := self.Conf.IsValid(); !ok {
+		return err
+	}
+	taskDir := dir + "/" + self.Conf.CrawlerName
+	var err error
+	self.TaskQueue, err = ds.OpenQueue(taskDir)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (self *Crawler) Close() {
+	if self.TaskQueue != nil {
+		self.TaskQueue.Close()
+	}
+}
+
+func (self *Crawler) InitStartTasks() error {
+	if self.Conf == nil {
+		return ErrEmptyCrawlerConf
 	}
 	ok, err := self.Conf.IsValid()
 	if !ok {
-		return nil, err
+		return err
 	}
-	var tasks []*types.Task
+	if self.TaskQueue == nil {
+		return ErrNilTaskQueue
+	}
 	for _, url := range self.Conf.StartUrls {
-		tasks = append(tasks, &types.Task{Url: url, CrawlerName: self.Conf.CrawlerName, ParserName: self.Conf.StartParserName})
+		task := types.Task{Url: url, CrawlerName: self.Conf.CrawlerName,
+			ParserName: self.Conf.StartParserName}
+		if _, err = self.TaskQueue.EnqueueObject(task); err != nil {
+			return err
+		}
 	}
-	return tasks, nil
+	return nil
 }
 
 func (self *Crawler) Process(task *types.Task) ([]types.Task, []map[string]interface{}, error) {
@@ -130,7 +168,7 @@ func (self *Crawler) Save(item map[string]interface{}) error {
 	if item == nil {
 		return ErrNilItem
 	}
-	if self.client == nil {
+	if self.es == nil {
 		return nil
 	}
 	if esType, ok := item["es_type"]; ok {
@@ -138,10 +176,10 @@ func (self *Crawler) Save(item map[string]interface{}) error {
 		t, _ := json.Marshal(item)
 		var err error
 		if id, has := item["id"]; has {
-			_, err = self.client.Index().Index(self.Conf.CrawlerName).
+			_, err = self.es.Index().Index(self.Conf.CrawlerName).
 				Type(esType.(string)).Id(id.(string)).BodyString(string(t)).Do(ctx)
 		} else {
-			_, err = self.client.Index().Index(self.Conf.CrawlerName).
+			_, err = self.es.Index().Index(self.Conf.CrawlerName).
 				Type(esType.(string)).BodyString(string(t)).Do(ctx)
 		}
 		return err

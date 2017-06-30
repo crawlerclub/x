@@ -5,7 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"github.com/crawlerclub/x/crawler"
-	"github.com/crawlerclub/x/ds"
+	"github.com/crawlerclub/x/store"
 	"github.com/crawlerclub/x/types"
 	"github.com/golang/glog"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -23,22 +23,28 @@ var (
 )
 
 type Controller struct {
-	Crawlers    map[string]crawler.Crawler
-	TaskQueue   *ds.Queue
-	CrontabDB   *leveldb.DB
-	RunningDB   *leveldb.DB
+	Crawlers  map[string]crawler.Crawler
+	Schduler  CrawlerScheduler
+	CrawlerDB *leveldb.DB
+	CrontabDB *leveldb.DB
+	RunningDB *leveldb.DB
+
 	WorkerCount int
-	isInited    bool
+
+	workDir  string
+	isInited bool
 }
 
 func (self *Controller) Init(dir string, wc int) error {
 	if wc <= 0 || wc > 1000 {
 		return ErrWorkerCount
 	}
+	self.workDir = dir
 	self.WorkerCount = wc
 	var err error
-	taskDir := dir + "/taskqueue"
-	self.TaskQueue, err = ds.OpenQueue(taskDir)
+
+	crawlerDir := dir + "/crawlerdb"
+	self.CrawlerDB, err = leveldb.OpenFile(crawlerDir, nil)
 	if err != nil {
 		return err
 	}
@@ -55,9 +61,52 @@ func (self *Controller) Init(dir string, wc int) error {
 		return err
 	}
 
-	self.Crawlers = make(map[string]crawler.Crawler)
+	self.initCrawlersFromDB()
+
 	self.isInited = true
 	return nil
+}
+
+func (self *Controller) initCrawlersFromDB() error {
+	self.Crawlers = make(map[string]crawler.Crawler)
+	self.Schduler.Init()
+	var err error
+	iter := self.CrawlerDB.NewIterator(nil, nil)
+	defer iter.Release()
+	for iter.Next() {
+		name := string(iter.Key())
+		value := iter.Value()
+		var item types.CrawlerItem
+		err = store.BytesToObject(value, &item)
+		if err != nil {
+			glog.Error(err)
+			continue
+		}
+
+		if item.Status != "enabled" {
+			continue
+		}
+
+		var crawler crawler.Crawler
+		crawler.Conf = &item.Conf
+		crawler.InitEs()
+
+		dir := self.workDir + "/queue/" + name
+		err = crawler.InitTaskQueue(dir)
+		if err != nil {
+			return err
+		}
+		self.Crawlers[name] = crawler
+
+		var sitem Item
+		sitem.CrawlerName = name
+		sitem.Weight = item.Weight
+		err = self.Schduler.Insert(sitem)
+		if err != nil {
+			return err
+		}
+	}
+	return iter.Error()
 }
 
 func (self *Controller) addToDB(ts int64, task types.Task, db *leveldb.DB) error {
@@ -87,11 +136,11 @@ func (self *Controller) Finish() error {
 	if !self.isInited {
 		return nil
 	}
-	err := self.TaskQueue.Close()
+	err := self.CrontabDB.Close()
 	if err != nil {
 		return err
 	}
-	err = self.CrontabDB.Close()
+	err = self.CrawlerDB.Close()
 	if err != nil {
 		return err
 	}
@@ -129,8 +178,12 @@ func (self *Controller) enqueueTask(wg *sync.WaitGroup, exitCh chan int, db *lev
 					glog.Error(err)
 					continue
 				}
-				self.TaskQueue.EnqueueObject(task)
-				db.Delete(key, nil)
+				if crawler, ok := self.Crawlers[task.CrawlerName]; ok {
+					crawler.TaskQueue.EnqueueObject(task)
+					db.Delete(key, nil)
+				} else {
+					glog.Error("no crawler for task.CrawlerName: ", task.CrawlerName)
+				}
 			}
 			iter.Release()
 			err := iter.Error()
@@ -165,28 +218,32 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 			return
 		default:
 			glog.Info("Work on next task! worker: ", worker)
-			glog.Info("TaskQueue length: ", self.TaskQueue.Length())
-			item, err := self.TaskQueue.Dequeue()
-			if err != nil {
-				glog.Error(err)
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			var task types.Task
-			err = item.ToObject(&task)
+			name, err := self.Schduler.WeightedChoice()
 			if err != nil {
 				glog.Error(err)
 				continue
 			}
-			now := time.Now().Unix()
-			// add task to RunningDB
-			err = self.AddRunning(now, task)
-			if err != nil {
-				glog.Error(err)
-				continue
-			}
+			glog.Info(worker, " is working on ", name)
+			if crawler, ok := self.Crawlers[name]; ok {
+				item, err := crawler.TaskQueue.Dequeue()
+				if err != nil {
+					glog.Error(err)
+					continue
+				}
+				var task types.Task
+				err = item.ToObject(&task)
+				if err != nil {
+					glog.Error(err)
+					continue
+				}
+				now := time.Now().Unix()
+				// add task to RunningDB
+				err = self.AddRunning(now, task)
+				if err != nil {
+					glog.Error(err)
+					continue
+				}
 
-			if crawler, ok := self.Crawlers[task.CrawlerName]; ok {
 				glog.Info("process task:", task)
 				tasks, items, err := crawler.Process(&task)
 				if err != nil {
@@ -212,13 +269,13 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 
 				for _, t := range tasks {
 					glog.Info("enqueue task:", t)
-					self.TaskQueue.EnqueueObject(t)
+					crawler.TaskQueue.EnqueueObject(t)
 				}
 				for _, item := range items {
 					crawler.Save(item)
 				}
 			} else {
-				glog.Error("No crawler named: ", task.CrawlerName)
+				glog.Error("No crawler named: ", name)
 			}
 			//time.Sleep(1 * time.Second)
 		}

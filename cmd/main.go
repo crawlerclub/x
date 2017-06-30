@@ -30,17 +30,6 @@ func main() {
 		glog.Fatal(err)
 	}
 	controller.Crawlers[crawler.Conf.CrawlerName] = crawler
-	/*
-		tasks, err := crawler.GetStartTasks()
-		if err != nil {
-			glog.Fatal(err)
-		}
-		for _, task := range tasks {
-			if _, err := controller.TaskQueue.EnqueueObject(task); err != nil {
-				glog.Fatal(err)
-			}
-		}
-	*/
 	glog.Info("run!")
 	controller.Run()
 }
