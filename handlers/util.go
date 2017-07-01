@@ -20,3 +20,11 @@ func mustEncode(w http.ResponseWriter, i interface{}) {
 	}
 }
 
+func ok(w http.ResponseWriter) {
+	rv := struct {
+		Status string `json:"status"`
+	}{
+		Status: "ok",
+	}
+	mustEncode(w, rv)
+}
