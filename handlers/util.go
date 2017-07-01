@@ -20,4 +20,3 @@ func mustEncode(w http.ResponseWriter, i interface{}) {
 	}
 }
 
-type varLookupFunc func(req *http.Request) string
