@@ -13,8 +13,7 @@ import (
 )
 
 var (
-	ErrNamesNotConsistent = errors.New("CrawlerNames not consistent")
-	ErrNameExists         = errors.New("CrawlerName already exists")
+	ErrNameExists = errors.New("CrawlerName already exists")
 )
 
 type CrudCrawlerHandler struct {
@@ -72,10 +71,11 @@ func (self *CrudCrawlerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		}
 		ok(w)
 	case "delete":
-		err := self.ctl.CrawlerDB.Delete([]byte(vars["name"]), nil)
+		err := self.ctl.DelCrawler(vars["name"])
 		if err != nil {
 			showError(w, r, err.Error(), 500)
 		} else {
+			ok(w)
 		}
 	default:
 		showError(w, r, "unknown action", 400)
@@ -93,16 +93,5 @@ func (self *CrudCrawlerHandler) saveCrawlerItem(r *http.Request, name string) er
 	if err != nil {
 		return err
 	}
-	ok, err := item.Conf.IsValid()
-	if !ok {
-		return err
-	}
-	if item.CrawlerName != item.Conf.CrawlerName || item.CrawlerName != name {
-		return ErrNamesNotConsistent
-	}
-	data, err := store.ObjectToBytes(item)
-	if err != nil {
-		return err
-	}
-	return self.ctl.CrawlerDB.Put([]byte(name), data, nil)
+	return self.ctl.AddCrawler(&item, name)
 }

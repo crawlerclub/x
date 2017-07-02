@@ -18,8 +18,10 @@ import (
 )
 
 var (
-	ErrNotInited   = errors.New("call Controller.Init first")
-	ErrWorkerCount = errors.New("worker count must between 0 and 1000")
+	ErrNotInited      = errors.New("call Controller.Init first")
+	ErrWorkerCount    = errors.New("worker count must between 0 and 1000")
+	ErrNilCrawlerItem = errors.New("CrawlerItem is nil")
+	ErrNamesNotSame   = errors.New("CrawlerNames are not the same")
 )
 
 type Controller struct {
@@ -64,6 +66,61 @@ func (self *Controller) Init(dir string, wc int) error {
 	self.initCrawlersFromDB()
 
 	self.isInited = true
+	return nil
+}
+
+func (self *Controller) DelCrawler(name string) error {
+	err := self.Schduler.Remove(name)
+	if err != nil && err != ErrNameNotFound {
+		return err
+	}
+	delete(self.Crawlers, name)
+	return self.CrawlerDB.Delete([]byte(name), nil)
+}
+
+func (self *Controller) AddCrawler(item *types.CrawlerItem, name string) error {
+	if item == nil {
+		return ErrNilCrawlerItem
+	}
+	ok, err := item.Conf.IsValid()
+	if !ok {
+		return err
+	}
+	if item.CrawlerName != item.Conf.CrawlerName || item.CrawlerName != name {
+		return ErrNamesNotSame
+	}
+	data, err := store.ObjectToBytes(*item)
+	if err != nil {
+		return nil
+	}
+	err = self.CrawlerDB.Put([]byte(name), data, nil)
+	if err != nil {
+		return err
+	}
+	if item.Status == "enable" && item.Weight > 0 {
+		var crawler crawler.Crawler
+		crawler.Conf = &item.Conf
+		crawler.InitEs()
+
+		dir := self.workDir + "/queue/" + name
+		err = crawler.InitTaskQueue(dir)
+		if err != nil {
+			return err
+		}
+		self.Crawlers[name] = crawler
+
+		err := self.Schduler.Remove(name)
+		if err != nil && err != ErrNameNotFound {
+			return err
+		}
+		var sitem Item
+		sitem.CrawlerName = name
+		sitem.Weight = item.Weight
+		err = self.Schduler.Insert(sitem)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -18,15 +18,15 @@ type Task struct {
 	RevisitInterval int64  `json:"revisit_interval" bson:"revisit_interval"`
 }
 
-func (self Task) Type() string {
+func (self *Task) Type() string {
 	return "task"
 }
 
-func (self Task) Id() string {
+func (self *Task) Id() string {
 	return self.Url
 }
 
-func (this Task) String() string {
+func (this *Task) String() string {
 	return fmt.Sprintf("{CrawlerName:%s, ParserName:%s, Url:%s, LastAccessTime:%d}",
 		this.CrawlerName, this.ParserName, this.Url, this.LastAccessTime)
 }
