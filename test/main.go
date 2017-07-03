@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/GeertJohan/go.rice"
 	"github.com/crawlerclub/x/controller"
 	"github.com/crawlerclub/x/handlers"
 	"github.com/gorilla/mux"
@@ -17,9 +18,10 @@ func main() {
 
 	router := mux.NewRouter()
 	crudHandler := handlers.NewCrudCrawlerHandler(&ctl)
-	router.Handle("/crawler/{action:create|retrieve|update|delete}/{name}", crudHandler)
+	router.Handle("/api/crawler/{action:create|retrieve|update|delete}/{name}", crudHandler)
 	listHandler := handlers.NewListCrawlerHandler(&ctl)
-	router.Handle("/list/crawler", listHandler)
-	http.Handle("/", router)
-	log.Fatal(http.ListenAndServe("0.0.0.0:8888", nil))
+	router.Handle("/api/list/crawler", listHandler)
+	http.Handle("/api/", router)
+	http.Handle("/", http.FileServer(rice.MustFindBox("http-files").HTTPBox()))
+	log.Fatal(http.ListenAndServe("0.0.0.0:8080", nil))
 }

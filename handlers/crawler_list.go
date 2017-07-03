@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"github.com/crawlerclub/x/controller"
+	"github.com/crawlerclub/x/store"
+	"github.com/crawlerclub/x/types"
 	"net/http"
 	"strconv"
 )
@@ -21,29 +23,41 @@ func (self *ListCrawlerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 	//vars := mux.Vars(r)
 	r.ParseForm()
-	start, _ := strconv.ParseInt(r.FormValue("start"), 10, 32)
+	offset, _ := strconv.ParseInt(r.FormValue("offset"), 10, 32)
 	limit, _ := strconv.ParseInt(r.FormValue("limit"), 10, 32)
-	if start < 0 {
-		start = 0
+	if offset < 0 {
+		offset = 0
 	}
 	if limit <= 0 {
 		limit = 10
 	}
 	iter := self.ctl.CrawlerDB.NewIterator(nil, nil)
 	var items []interface{}
-	items = append(items, "hello")
 	i := int64(-1)
 	cnt := int64(0)
+	var item types.CrawlerItem
 	for iter.Next() {
 		i += 1
-		if i < start {
+		if i < offset {
 			continue
 		}
-		items = append(items, iter.Value)
+		err := store.BytesToObject(iter.Value(), &item)
+		if err != nil {
+			showError(w, r, err.Error(), 500)
+			return
+		}
+		items = append(items, item)
 		cnt += 1
 		if cnt >= limit {
 			break
 		}
 	}
-	mustEncode(w, items)
+	rv := struct {
+		Total int           `json:"total"`
+		Rows  []interface{} `json:"rows"`
+	}{
+		Total: 100,
+		Rows:  items,
+	}
+	mustEncode(w, rv)
 }
