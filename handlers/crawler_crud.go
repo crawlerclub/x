@@ -64,7 +64,7 @@ func (self *CrudCrawlerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		}
 		return
 	case "update":
-		err := self.saveCrawlerItem(r, vars["name"])
+		err := self.saveCrawlerItem(r)
 		if err != nil {
 			showError(w, r, err.Error(), 400)
 			return
@@ -83,7 +83,7 @@ func (self *CrudCrawlerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (self *CrudCrawlerHandler) saveCrawlerItem(r *http.Request, name string) error {
+func (self *CrudCrawlerHandler) saveCrawlerItem(r *http.Request) error {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return err
@@ -93,5 +93,5 @@ func (self *CrudCrawlerHandler) saveCrawlerItem(r *http.Request, name string) er
 	if err != nil {
 		return err
 	}
-	return self.ctl.AddCrawler(&item, name)
+	return self.ctl.AddCrawler(&item)
 }

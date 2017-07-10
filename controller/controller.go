@@ -18,18 +18,18 @@ import (
 )
 
 var (
-	ErrNotInited      = errors.New("call Controller.Init first")
-	ErrWorkerCount    = errors.New("worker count must between 0 and 1000")
-	ErrNilCrawlerItem = errors.New("CrawlerItem is nil")
-	ErrNamesNotSame   = errors.New("CrawlerNames are not the same")
+	ErrNotInited      = errors.New("controller/controller.go call Controller.Init first")
+	ErrWorkerCount    = errors.New("controller/controller.go worker count must between 0 and 1000")
+	ErrNilCrawlerItem = errors.New("controller/controller.go CrawlerItem is nil")
+	ErrNamesNotSame   = errors.New("controller/controller.go CrawlerNames are not the same")
 )
 
 type Controller struct {
-	Crawlers  map[string]crawler.Crawler
-	Schduler  CrawlerScheduler
-	CrawlerDB *leveldb.DB
-	CrontabDB *leveldb.DB
-	RunningDB *leveldb.DB
+	Crawlers     map[string]crawler.Crawler
+	Schduler     CrawlerScheduler
+	CrontabDB    *leveldb.DB
+	RunningDB    *leveldb.DB
+	CrawlerStore *store.CrawlerDB
 
 	WorkerCount int
 
@@ -45,8 +45,7 @@ func (self *Controller) Init(dir string, wc int) error {
 	self.WorkerCount = wc
 	var err error
 
-	crawlerDir := dir + "/crawlerdb"
-	self.CrawlerDB, err = leveldb.OpenFile(crawlerDir, nil)
+	self.CrawlerStore, err = store.NewCrawlerDB("sqlite3", dir+"/crawlers.sqlite3")
 	if err != nil {
 		return err
 	}
@@ -75,10 +74,10 @@ func (self *Controller) DelCrawler(name string) error {
 		return err
 	}
 	delete(self.Crawlers, name)
-	return self.CrawlerDB.Delete([]byte(name), nil)
+	return self.CrawlerStore.DeleteByName(name)
 }
 
-func (self *Controller) AddCrawler(item *types.CrawlerItem, name string) error {
+func (self *Controller) AddCrawler(item *types.CrawlerItem) error {
 	if item == nil {
 		return ErrNilCrawlerItem
 	}
@@ -86,35 +85,31 @@ func (self *Controller) AddCrawler(item *types.CrawlerItem, name string) error {
 	if !ok {
 		return err
 	}
-	if item.CrawlerName != item.Conf.CrawlerName || item.CrawlerName != name {
+	if item.CrawlerName != item.Conf.CrawlerName {
 		return ErrNamesNotSame
 	}
-	data, err := store.ObjectToBytes(*item)
-	if err != nil {
-		return nil
-	}
-	err = self.CrawlerDB.Put([]byte(name), data, nil)
+	err = self.CrawlerStore.Insert(item)
 	if err != nil {
 		return err
 	}
-	if item.Status == "enable" && item.Weight > 0 {
+	if item.Status == "enabled" && item.Weight > 0 {
 		var crawler crawler.Crawler
 		crawler.Conf = &item.Conf
 		crawler.InitEs()
 
-		dir := self.workDir + "/queue/" + name
+		dir := self.workDir + "/queue/" + item.CrawlerName
 		err = crawler.InitTaskQueue(dir)
 		if err != nil {
 			return err
 		}
-		self.Crawlers[name] = crawler
+		self.Crawlers[item.CrawlerName] = crawler
 
-		err := self.Schduler.Remove(name)
+		err = self.Schduler.Remove(item.CrawlerName)
 		if err != nil && err != ErrNameNotFound {
 			return err
 		}
 		var sitem Item
-		sitem.CrawlerName = name
+		sitem.CrawlerName = item.CrawlerName
 		sitem.Weight = item.Weight
 		err = self.Schduler.Insert(sitem)
 		if err != nil {
@@ -127,43 +122,31 @@ func (self *Controller) AddCrawler(item *types.CrawlerItem, name string) error {
 func (self *Controller) initCrawlersFromDB() error {
 	self.Crawlers = make(map[string]crawler.Crawler)
 	self.Schduler.Init()
-	var err error
-	iter := self.CrawlerDB.NewIterator(nil, nil)
-	defer iter.Release()
-	for iter.Next() {
-		name := string(iter.Key())
-		value := iter.Value()
-		var item types.CrawlerItem
-		err = store.BytesToObject(value, &item)
-		if err != nil {
-			glog.Error(err)
-			continue
-		}
-
-		if item.Status != "enabled" {
-			continue
-		}
-
+	items, err := self.CrawlerStore.List("WHERE status=?", "enabled")
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
 		var crawler crawler.Crawler
 		crawler.Conf = &item.Conf
 		crawler.InitEs()
 
-		dir := self.workDir + "/queue/" + name
+		dir := self.workDir + "/queue/" + item.CrawlerName
 		err = crawler.InitTaskQueue(dir)
 		if err != nil {
 			return err
 		}
-		self.Crawlers[name] = crawler
+		self.Crawlers[item.CrawlerName] = crawler
 
 		var sitem Item
-		sitem.CrawlerName = name
+		sitem.CrawlerName = item.CrawlerName
 		sitem.Weight = item.Weight
 		err = self.Schduler.Insert(sitem)
 		if err != nil {
 			return err
 		}
 	}
-	return iter.Error()
+	return nil
 }
 
 func (self *Controller) addToDB(ts int64, task types.Task, db *leveldb.DB) error {
@@ -193,11 +176,8 @@ func (self *Controller) Finish() error {
 	if !self.isInited {
 		return nil
 	}
+	self.CrawlerStore.Close()
 	err := self.CrontabDB.Close()
-	if err != nil {
-		return err
-	}
-	err = self.CrawlerDB.Close()
 	if err != nil {
 		return err
 	}

@@ -26,17 +26,15 @@ func TestCrawlerDB(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	/*
-			err = e.CrawlerInsert(&item)
-			if err != nil {
-				t.Error(err)
-			}
-		i, err := e.CrawlerSelect(1)
-		if err != nil {
-			t.Error(err)
-		}
-		t.Log(i)
-	*/
+	err = e.Insert(&item)
+	if err != nil {
+		t.Error(err)
+	}
+	i, err := e.Select(1)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(i)
 	items, err := e.List("WHERE author=? limit 1 offset 5", "Zhanliang Liu")
 	if err != nil {
 		t.Error(err)
@@ -44,4 +42,10 @@ func TestCrawlerDB(t *testing.T) {
 	for _, j := range items {
 		t.Log(j)
 	}
+
+	count, err := e.Count("")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(count)
 }

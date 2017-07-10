@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	ErrEmptyCrawlerConf = errors.New("empty CrawlerConf")
-	ErrNilTask          = errors.New("nil Task")
-	ErrNilItem          = errors.New("nil Item")
-	ErrNilTaskQueue     = errors.New("nil TaskQueue")
+	ErrEmptyCrawlerConf = errors.New("crawler/crawler.go empty CrawlerConf")
+	ErrNilTask          = errors.New("crawler/crawler.go nil Task")
+	ErrNilItem          = errors.New("crawler/crawler.go nil Item")
+	ErrNilTaskQueue     = errors.New("crawler/crawler.go nil TaskQueue")
 )
 
 type Crawler struct {

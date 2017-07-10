@@ -28,12 +28,13 @@ const (
 	CREATE INDEX IF NOT EXISTS status_index on crawlers(status);
 	`
 
-	insertCrawlerSql = `INSERT INTO crawlers(crawler_name, conf, weight, status, create_time, author) VALUES(?, ?, ?, ?, ?, ?);`
-	updateCrawlerSql = `UPDATE crawlers SET crawler_name=?, conf=?, weight=?, status=?, modify_time=?, author=? WHERE id=?;`
-	selectCrawlerSql = `SELECT * FROM crawlers WHERE id=?;`
-	deleteCrawlerSql = `DELETE FROM crawlers WHERE id=?;`
-	queryCrawlerSql  = `SELECT id, crawler_name, weight, status, create_time, modify_time, author FROM crawlers %s;`
-	countCrawlerSql  = `SELECT COUNT(*) FROM crawlers %s;`
+	insertCrawlerSql       = `INSERT INTO crawlers(crawler_name, conf, weight, status, create_time, author) VALUES(?, ?, ?, ?, ?, ?);`
+	updateCrawlerSql       = `UPDATE crawlers SET crawler_name=?, conf=?, weight=?, status=?, modify_time=?, author=? WHERE id=?;`
+	selectCrawlerSql       = `SELECT * FROM crawlers WHERE id=?;`
+	deleteCrawlerSql       = `DELETE FROM crawlers WHERE id=?;`
+	deleteByNameCrawlerSql = `DELETE FROM crawlers WHERE crawler_name=?;`
+	queryCrawlerSql        = `SELECT id, crawler_name, weight, status, create_time, modify_time, author FROM crawlers %s;`
+	countCrawlerSql        = `SELECT COUNT(*) FROM crawlers %s;`
 )
 
 type CrawlerDB struct {
@@ -137,7 +138,20 @@ func (self *CrawlerDB) Delete(id int) error {
 	return err
 }
 
-func (self *CrawlerDB) Count(query string, args ...interface{}) (int, error) {
+func (self *CrawlerDB) DeleteByName(name string) error {
+	if self.db == nil {
+		return ErrNilCrawlerDB
+	}
+	stmt, err := self.db.Prepare(deleteByNameCrawlerSql)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(name)
+	return err
+}
+
+func (self *CrawlerDB) Count(query string, args ...interface{}) (int64, error) {
 	if self.db == nil {
 		return 0, ErrNilCrawlerDB
 	}
@@ -147,7 +161,7 @@ func (self *CrawlerDB) Count(query string, args ...interface{}) (int, error) {
 		return 0, err
 	}
 	defer rows.Close()
-	var count int
+	var count int64
 	for rows.Next() {
 		err = rows.Scan(&count)
 		if err != nil {
