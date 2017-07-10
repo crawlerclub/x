@@ -4,20 +4,18 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/crawlerclub/x/types"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
-	ErrNilDB          = errors.New("store/sqlite3_db.go sql.DB is nil")
-	ErrNilCrawlerItem = errors.New("store/sqlite3_db.go CrawlerItem is nil")
+	ErrNilCrawlerDB   = errors.New("store/sqlite3_crawlers.go sql.DB is nil")
+	ErrNilCrawlerItem = errors.New("store/sqlite3_crawlers.go CrawlerItem is nil")
 )
 
 const (
-	db           = "x"
-	crawlerTable = "crawlers"
-	taskTable    = "tasks"
-	setupSql     = `CREATE TABLE IF NOT EXISTS crawlers (
+	setupCrawlerSql = `CREATE TABLE IF NOT EXISTS crawlers (
 		id INTEGER PRIMARY KEY,
 		crawler_name TEXT UNIQUE NOT NULL,
 		conf TEXT NOT NULL,
@@ -34,13 +32,15 @@ const (
 	updateCrawlerSql = `UPDATE crawlers SET crawler_name=?, conf=?, weight=?, status=?, modify_time=?, author=? WHERE id=?;`
 	selectCrawlerSql = `SELECT * FROM crawlers WHERE id=?;`
 	deleteCrawlerSql = `DELETE FROM crawlers WHERE id=?;`
+	queryCrawlerSql  = `SELECT id, crawler_name, weight, status, create_time, modify_time, author FROM crawlers %s;`
+	countCrawlerSql  = `SELECT COUNT(*) FROM crawlers %s;`
 )
 
-type Engine struct {
+type CrawlerDB struct {
 	db *sql.DB
 }
 
-func NewEngine(driverName, dbName string) (*Engine, error) {
+func NewCrawlerDB(driverName, dbName string) (*CrawlerDB, error) {
 	db, err := sql.Open(driverName, dbName)
 	if err != nil {
 		return nil, err
@@ -48,30 +48,30 @@ func NewEngine(driverName, dbName string) (*Engine, error) {
 	if err = db.Ping(); err != nil {
 		return nil, err
 	}
-	return &Engine{db}, nil
+	return &CrawlerDB{db}, nil
 }
 
-func (self *Engine) Close() {
+func (self *CrawlerDB) Close() {
 	if self.db != nil {
 		self.db.Close()
 	}
 }
 
-func (self *Engine) CreateTables() error {
+func (self *CrawlerDB) CreateTables() error {
 	if self.db == nil {
-		return ErrNilDB
+		return ErrNilCrawlerDB
 	}
 	var err error
-	_, err = self.db.Exec(setupSql)
+	_, err = self.db.Exec(setupCrawlerSql)
 	return err
 }
 
-func (self *Engine) cu(item *types.CrawlerItem, action string) error {
+func (self *CrawlerDB) cu(item *types.CrawlerItem, action string) error {
 	if item == nil {
 		return ErrNilCrawlerItem
 	}
 	if self.db == nil {
-		return ErrNilDB
+		return ErrNilCrawlerDB
 	}
 	conf, err := json.Marshal(item.Conf)
 	if err != nil {
@@ -94,17 +94,17 @@ func (self *Engine) cu(item *types.CrawlerItem, action string) error {
 	return err
 }
 
-func (self *Engine) CrawlerInsert(item *types.CrawlerItem) error {
+func (self *CrawlerDB) Insert(item *types.CrawlerItem) error {
 	return self.cu(item, "insert")
 }
 
-func (self *Engine) CrawlerUpdate(item *types.CrawlerItem) error {
+func (self *CrawlerDB) Update(item *types.CrawlerItem) error {
 	return self.cu(item, "update")
 }
 
-func (self *Engine) CrawlerSelect(id int) (*types.CrawlerItem, error) {
+func (self *CrawlerDB) Select(id int) (*types.CrawlerItem, error) {
 	if self.db == nil {
-		return nil, ErrNilDB
+		return nil, ErrNilCrawlerDB
 	}
 	stmt, err := self.db.Prepare(selectCrawlerSql)
 	if err != nil {
@@ -124,9 +124,9 @@ func (self *Engine) CrawlerSelect(id int) (*types.CrawlerItem, error) {
 	return item, nil
 }
 
-func (self *Engine) CrawlerDelete(id int) error {
+func (self *CrawlerDB) Delete(id int) error {
 	if self.db == nil {
-		return ErrNilDB
+		return ErrNilCrawlerDB
 	}
 	stmt, err := self.db.Prepare(deleteCrawlerSql)
 	if err != nil {
@@ -135,4 +135,50 @@ func (self *Engine) CrawlerDelete(id int) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(id)
 	return err
+}
+
+func (self *CrawlerDB) Count(query string, args ...interface{}) (int, error) {
+	if self.db == nil {
+		return 0, ErrNilCrawlerDB
+	}
+	sql := fmt.Sprintf(countCrawlerSql, query)
+	rows, err := self.db.Query(sql, args...)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	var count int
+	for rows.Next() {
+		err = rows.Scan(&count)
+		if err != nil {
+			return 0, err
+		}
+		break
+	}
+	return count, nil
+}
+
+func (self *CrawlerDB) List(query string, args ...interface{}) ([]*types.CrawlerItem, error) {
+	if self.db == nil {
+		return nil, ErrNilCrawlerDB
+	}
+	sql := fmt.Sprintf(queryCrawlerSql, query)
+	rows, err := self.db.Query(sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*types.CrawlerItem
+	for rows.Next() {
+		item := new(types.CrawlerItem)
+		if err = rows.Scan(&item.Id, &item.CrawlerName, &item.Weight, &item.Status,
+			&item.CreateTime, &item.ModifyTime, &item.Author); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

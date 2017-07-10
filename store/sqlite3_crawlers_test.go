@@ -7,11 +7,12 @@ import (
 	"testing"
 )
 
-func TestEngine(t *testing.T) {
-	e, err := NewEngine("sqlite3", "db.sqlite3")
+func TestCrawlerDB(t *testing.T) {
+	e, err := NewCrawlerDB("sqlite3", "db.sqlite3")
 	if err != nil {
 		t.Error(err)
 	}
+	defer e.Close()
 	var item types.CrawlerItem
 	bytes, err := ioutil.ReadFile("../test/http-files/editor/default.json")
 	if err != nil {
@@ -26,14 +27,21 @@ func TestEngine(t *testing.T) {
 		t.Error(err)
 	}
 	/*
-		err = e.CrawlerInsert(&item)
+			err = e.CrawlerInsert(&item)
+			if err != nil {
+				t.Error(err)
+			}
+		i, err := e.CrawlerSelect(1)
 		if err != nil {
 			t.Error(err)
 		}
+		t.Log(i)
 	*/
-	i, err := e.CrawlerSelect(1)
+	items, err := e.List("WHERE author=? limit 1 offset 5", "Zhanliang Liu")
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(i)
+	for _, j := range items {
+		t.Log(j)
+	}
 }

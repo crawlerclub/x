@@ -9,6 +9,7 @@ type StoreItem interface {
 }
 
 type Task struct {
+	Id              int    `json:"id" bson:"id"`
 	CrawlerName     string `json:"crawler_name" bson:"crawler_name"`
 	ParserName      string `json:"parser_name" bson:"parser_name"`
 	IsSeedUrl       bool   `json:"is_seed_url" bson:"is_seed_url"`
@@ -18,20 +19,13 @@ type Task struct {
 	RevisitInterval int64  `json:"revisit_interval" bson:"revisit_interval"`
 }
 
-func (self *Task) Type() string {
-	return "task"
-}
-
-func (self *Task) Id() string {
-	return self.Url
-}
-
 func (this *Task) String() string {
 	return fmt.Sprintf("{CrawlerName:%s, ParserName:%s, Url:%s, LastAccessTime:%d}",
 		this.CrawlerName, this.ParserName, this.Url, this.LastAccessTime)
 }
 
 type CrawlerItem struct {
+	Id          int         `json:"id" bson:"id"`
 	CrawlerName string      `json:"crawler_name" bson:"crawler_name"`
 	Conf        CrawlerConf `json:"conf" bson:"conf"`
 	Weight      int         `json:"weight" bson:"weight"`

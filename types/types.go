@@ -27,7 +27,7 @@ type ParseConf struct {
 	RevisitInterval int64                  `json:"revisit_interval" bson:"revisit_interval"`
 }
 
-func (this ParseConf) String() string {
+func (this *ParseConf) String() string {
 	return fmt.Sprintf("{ParserType:%s, ParserName:%s, RevisitInterval:%d}",
 		this.ParserType, this.ParserName, this.RevisitInterval)
 }
@@ -43,11 +43,11 @@ type CrawlerConf struct {
 	EsUri           string               `json:"es_uri" bson:"es_uri"`
 }
 
-func (self CrawlerConf) Type() string {
+func (self *CrawlerConf) Type() string {
 	return "crawler"
 }
 
-func (self CrawlerConf) Id() string {
+func (self *CrawlerConf) Id() string {
 	return self.CrawlerName
 }
 
