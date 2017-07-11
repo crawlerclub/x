@@ -77,7 +77,7 @@ func (self *Controller) DelCrawler(name string) error {
 	return self.CrawlerStore.DeleteByName(name)
 }
 
-func (self *Controller) AddCrawler(item *types.CrawlerItem) error {
+func (self *Controller) AddCrawler(item *types.CrawlerItem, isNew bool) error {
 	if item == nil {
 		return ErrNilCrawlerItem
 	}
@@ -88,7 +88,11 @@ func (self *Controller) AddCrawler(item *types.CrawlerItem) error {
 	if item.CrawlerName != item.Conf.CrawlerName {
 		return ErrNamesNotSame
 	}
-	err = self.CrawlerStore.Insert(item)
+	if isNew {
+		err = self.CrawlerStore.Insert(item)
+	} else {
+		err = self.CrawlerStore.Update(item)
+	}
 	if err != nil {
 		return err
 	}

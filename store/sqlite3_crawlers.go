@@ -31,6 +31,7 @@ const (
 	insertCrawlerSql       = `INSERT INTO crawlers(crawler_name, conf, weight, status, create_time, author) VALUES(?, ?, ?, ?, ?, ?);`
 	updateCrawlerSql       = `UPDATE crawlers SET crawler_name=?, conf=?, weight=?, status=?, modify_time=?, author=? WHERE id=?;`
 	selectCrawlerSql       = `SELECT * FROM crawlers WHERE id=?;`
+	selectByNameCrawlerSql = `SELECT * FROM crawlers WHERE crawler_name=?;`
 	deleteCrawlerSql       = `DELETE FROM crawlers WHERE id=?;`
 	deleteByNameCrawlerSql = `DELETE FROM crawlers WHERE crawler_name=?;`
 	queryCrawlerSql        = `SELECT id, crawler_name, weight, status, create_time, modify_time, author FROM crawlers %s;`
@@ -115,6 +116,27 @@ func (self *CrawlerDB) Select(id int) (*types.CrawlerItem, error) {
 	item := new(types.CrawlerItem)
 	var conf string
 	err = stmt.QueryRow(id).Scan(&item.Id, &item.CrawlerName, &conf, &item.Weight, &item.Status, &item.CreateTime, &item.ModifyTime, &item.Author)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal([]byte(conf), &item.Conf)
+	if err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+func (self *CrawlerDB) SelectByName(name string) (*types.CrawlerItem, error) {
+	if self.db == nil {
+		return nil, ErrNilCrawlerDB
+	}
+	stmt, err := self.db.Prepare(selectByNameCrawlerSql)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	item := new(types.CrawlerItem)
+	var conf string
+	err = stmt.QueryRow(name).Scan(&item.Id, &item.CrawlerName, &conf, &item.Weight, &item.Status, &item.CreateTime, &item.ModifyTime, &item.Author)
 	if err != nil {
 		return nil, err
 	}

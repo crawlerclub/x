@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/crawlerclub/x/controller"
-	"github.com/crawlerclub/x/store"
 	"github.com/crawlerclub/x/types"
 	"github.com/gorilla/mux"
-	"github.com/syndtr/goleveldb/leveldb"
 	"io/ioutil"
 	"net/http"
 )
@@ -25,46 +23,29 @@ func NewCrudCrawlerHandler(ctl *controller.Controller) *CrudCrawlerHandler {
 }
 
 func (self *CrudCrawlerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if self.ctl == nil || self.ctl.CrawlerDB == nil {
+	if self.ctl == nil || self.ctl.CrawlerStore == nil {
 		showError(w, r, "controller is nil", 500)
 		return
 	}
 	vars := mux.Vars(r)
 	switch vars["action"] {
 	case "create":
-		has, err := self.ctl.CrawlerDB.Has([]byte(vars["name"]), nil)
-		if err != nil {
-			showError(w, r, err.Error(), 500)
-			return
-		}
-		if has {
-			showError(w, r, ErrNameExists.Error(), 400)
-			return
-		}
-		err = self.saveCrawlerItem(r, vars["name"])
+		err := self.saveCrawlerItem(r, true)
 		if err != nil {
 			showError(w, r, err.Error(), 400)
 			return
 		}
 		ok(w)
 	case "retrieve":
-		data, err := self.ctl.CrawlerDB.Get([]byte(vars["name"]), nil)
+		item, err := self.ctl.CrawlerStore.SelectByName(vars["name"])
 		if err == nil {
-			var item types.CrawlerItem
-			err = store.BytesToObject(data, &item)
-			if err != nil {
-				showError(w, r, err.Error(), 500)
-			} else {
-				mustEncode(w, item)
-			}
-		} else if err == leveldb.ErrNotFound {
-			showError(w, r, err.Error(), 404)
+			mustEncode(w, item)
 		} else {
 			showError(w, r, err.Error(), 500)
 		}
 		return
 	case "update":
-		err := self.saveCrawlerItem(r)
+		err := self.saveCrawlerItem(r, false)
 		if err != nil {
 			showError(w, r, err.Error(), 400)
 			return
@@ -83,7 +64,7 @@ func (self *CrudCrawlerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (self *CrudCrawlerHandler) saveCrawlerItem(r *http.Request) error {
+func (self *CrudCrawlerHandler) saveCrawlerItem(r *http.Request, isNew bool) error {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return err
@@ -93,5 +74,5 @@ func (self *CrudCrawlerHandler) saveCrawlerItem(r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return self.ctl.AddCrawler(&item)
+	return self.ctl.AddCrawler(&item, isNew)
 }
