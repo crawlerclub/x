@@ -14,7 +14,10 @@ func main() {
 	flag.Parse()
 
 	var ctl controller.Controller
-	ctl.Init("./run", 10)
+	err := ctl.Init("./run", 10)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	router := mux.NewRouter()
 	crudHandler := handlers.NewCrudCrawlerHandler(&ctl)

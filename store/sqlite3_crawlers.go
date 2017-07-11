@@ -50,6 +50,10 @@ func NewCrawlerDB(driverName, dbName string) (*CrawlerDB, error) {
 	if err = db.Ping(); err != nil {
 		return nil, err
 	}
+	_, err = db.Exec(setupCrawlerSql)
+	if err != nil {
+		return nil, err
+	}
 	return &CrawlerDB{db}, nil
 }
 
@@ -57,15 +61,6 @@ func (self *CrawlerDB) Close() {
 	if self.db != nil {
 		self.db.Close()
 	}
-}
-
-func (self *CrawlerDB) CreateTables() error {
-	if self.db == nil {
-		return ErrNilCrawlerDB
-	}
-	var err error
-	_, err = self.db.Exec(setupCrawlerSql)
-	return err
 }
 
 func (self *CrawlerDB) cu(item *types.CrawlerItem, action string) error {

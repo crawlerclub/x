@@ -9,14 +9,16 @@ type StoreItem interface {
 }
 
 type Task struct {
-	Id              int    `json:"id" bson:"id"`
+	Id              int64  `json:"id" bson:"id"`
 	CrawlerName     string `json:"crawler_name" bson:"crawler_name"`
 	ParserName      string `json:"parser_name" bson:"parser_name"`
 	IsSeedUrl       bool   `json:"is_seed_url" bson:"is_seed_url"`
 	Url             string `json:"url" bson:"url"`
 	Data            string `json:"data" bson:"data"`
+	Status          string `json:"status" bson:"status"`
 	LastAccessTime  int64  `json:"last_access_time" bson:"last_access_time"`
 	RevisitInterval int64  `json:"revisit_interval" bson:"revisit_interval"`
+	NextExecTime    int64  `json:"next_exec_time" bson:"next_exec_time"`
 }
 
 func (this *Task) String() string {

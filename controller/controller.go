@@ -1,15 +1,11 @@
 package controller
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
 	"github.com/crawlerclub/x/crawler"
 	"github.com/crawlerclub/x/store"
 	"github.com/crawlerclub/x/types"
 	"github.com/golang/glog"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
 	"os"
 	"os/signal"
 	"sync"
@@ -27,11 +23,10 @@ var (
 type Controller struct {
 	Crawlers     map[string]crawler.Crawler
 	Schduler     CrawlerScheduler
-	CrontabDB    *leveldb.DB
-	RunningDB    *leveldb.DB
 	CrawlerStore *store.CrawlerDB
-
-	WorkerCount int
+	RunningStore *store.TaskDB
+	CrontabStore *store.TaskDB
+	WorkerCount  int
 
 	workDir  string
 	isInited bool
@@ -43,28 +38,60 @@ func (self *Controller) Init(dir string, wc int) error {
 	}
 	self.workDir = dir
 	self.WorkerCount = wc
-	var err error
-
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			return err
+		}
+	}
 	self.CrawlerStore, err = store.NewCrawlerDB("sqlite3", dir+"/crawlers.sqlite3")
 	if err != nil {
 		return err
 	}
-
-	cronDir := dir + "/crontabdb"
-	self.CrontabDB, err = leveldb.OpenFile(cronDir, nil)
+	self.RunningStore, err = store.NewTaskDB("sqlite3", dir+"/running.sqlite3")
 	if err != nil {
 		return err
 	}
-
-	runDir := dir + "/runningdb"
-	self.RunningDB, err = leveldb.OpenFile(runDir, nil)
+	self.CrontabStore, err = store.NewTaskDB("sqlite3", dir+"/crontab.sqlite3")
 	if err != nil {
 		return err
 	}
-
-	self.initCrawlersFromDB()
-
+	err = self.initCrawlersFromDB()
+	if err != nil {
+		return err
+	}
 	self.isInited = true
+	return nil
+}
+
+func (self *Controller) initCrawlersFromDB() error {
+	self.Crawlers = make(map[string]crawler.Crawler)
+	self.Schduler.Init()
+	items, err := self.CrawlerStore.List("WHERE status=?", "enabled")
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		var crawler crawler.Crawler
+		crawler.Conf = &item.Conf
+		crawler.InitEs()
+
+		dir := self.workDir + "/queue/" + item.CrawlerName
+		err = crawler.InitTaskQueue(dir)
+		if err != nil {
+			return err
+		}
+		self.Crawlers[item.CrawlerName] = crawler
+
+		var sitem Item
+		sitem.CrawlerName = item.CrawlerName
+		sitem.Weight = item.Weight
+		err = self.Schduler.Insert(sitem)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -123,80 +150,23 @@ func (self *Controller) AddCrawler(item *types.CrawlerItem, isNew bool) error {
 	return nil
 }
 
-func (self *Controller) initCrawlersFromDB() error {
-	self.Crawlers = make(map[string]crawler.Crawler)
-	self.Schduler.Init()
-	items, err := self.CrawlerStore.List("WHERE status=?", "enabled")
-	if err != nil {
-		return err
-	}
-	for _, item := range items {
-		var crawler crawler.Crawler
-		crawler.Conf = &item.Conf
-		crawler.InitEs()
-
-		dir := self.workDir + "/queue/" + item.CrawlerName
-		err = crawler.InitTaskQueue(dir)
-		if err != nil {
-			return err
-		}
-		self.Crawlers[item.CrawlerName] = crawler
-
-		var sitem Item
-		sitem.CrawlerName = item.CrawlerName
-		sitem.Weight = item.Weight
-		err = self.Schduler.Insert(sitem)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (self *Controller) addToDB(ts int64, task types.Task, db *leveldb.DB) error {
+func (self *Controller) Finish() {
 	if !self.isInited {
-		return ErrNotInited
-	}
-	key := time.Unix(ts, 0).Format("20060102030405") + ":" + task.Url
-	var buffer bytes.Buffer
-	encoder := gob.NewEncoder(&buffer)
-	if err := encoder.Encode(task); err != nil {
-		return err
-	}
-	err := db.Put([]byte(key), buffer.Bytes(), nil)
-	return err
-}
-
-func (self *Controller) AddCrontab(ts int64, task types.Task) error {
-	glog.Info("add crontab: ", task)
-	return self.addToDB(ts, task, self.CrontabDB)
-}
-
-func (self *Controller) AddRunning(ts int64, task types.Task) error {
-	return self.addToDB(ts, task, self.RunningDB)
-}
-
-func (self *Controller) Finish() error {
-	if !self.isInited {
-		return nil
+		return
 	}
 	self.CrawlerStore.Close()
-	err := self.CrontabDB.Close()
-	if err != nil {
-		return err
-	}
-	err = self.RunningDB.Close()
-	return err
+	self.RunningStore.Close()
+	self.CrontabStore.Close()
 }
 
-func (self *Controller) enqueueTask(wg *sync.WaitGroup, exitCh chan int, db *leveldb.DB, diff int64, name string) {
+func (self *Controller) enqueueTask(wg *sync.WaitGroup, exitCh chan int, name string) {
 	if !self.isInited {
 		glog.Error(ErrNotInited)
 		return
 	}
 	defer wg.Done()
-	glog.Info("start ", name)
-	defer glog.Info("exit ", name)
+	glog.Info("start ", name, " worker")
+	defer glog.Info("exit ", name, "worker")
 	for {
 		select {
 		case <-exitCh:
@@ -204,32 +174,32 @@ func (self *Controller) enqueueTask(wg *sync.WaitGroup, exitCh chan int, db *lev
 		default:
 			glog.Info("begin ", name)
 			now := time.Now().Unix()
-			start := time.Unix(0, 0).Format("20060102030405")
-			limit := time.Unix(now+diff, 0).Format("20060102030405")
-			iter := db.NewIterator(&util.Range{Start: []byte(start), Limit: []byte(limit)}, nil)
-			for iter.Next() {
-				key := iter.Key()
-				value := iter.Value()
-				buffer := bytes.NewBuffer(value)
-				decoder := gob.NewDecoder(buffer)
-				var task types.Task
-				err := decoder.Decode(&task)
-				glog.Info(string(key), task)
-				if err != nil {
-					glog.Error(err)
-					continue
-				}
+			var tasks []*types.Task
+			var err error
+			if name == "cron" {
+				tasks, err = self.CrontabStore.List("WHERE next_exec_time>?", now)
+			} else if name == "retry" {
+				tasks, err = self.RunningStore.List("WHERE next_exec_time>?", now)
+			} else {
+				glog.Error("unknown worker: ", name)
+				return
+			}
+			if err != nil {
+				glog.Error(err)
+				return
+			}
+			for _, task := range tasks {
 				if crawler, ok := self.Crawlers[task.CrawlerName]; ok {
 					crawler.TaskQueue.EnqueueObject(task)
-					db.Delete(key, nil)
+					if name == "retry" {
+						continue
+					}
+					task.LastAccessTime = now
+					task.NextExecTime = now + task.RevisitInterval
+					self.CrontabStore.Update(task)
 				} else {
 					glog.Error("no crawler for task.CrawlerName: ", task.CrawlerName)
 				}
-			}
-			iter.Release()
-			err := iter.Error()
-			if err != nil {
-				glog.Error(err)
 			}
 			// every 60 seconds
 			time.Sleep(5 * time.Second)
@@ -238,11 +208,11 @@ func (self *Controller) enqueueTask(wg *sync.WaitGroup, exitCh chan int, db *lev
 }
 
 func (self *Controller) cron(wg *sync.WaitGroup, exitCh chan int) {
-	self.enqueueTask(wg, exitCh, self.CrontabDB, 120, "cron worker")
+	self.enqueueTask(wg, exitCh, "cron")
 }
 
 func (self *Controller) retry(wg *sync.WaitGroup, exitCh chan int) {
-	self.enqueueTask(wg, exitCh, self.RunningDB, -600, "retry worker")
+	self.enqueueTask(wg, exitCh, "retry")
 }
 
 func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan int) {
@@ -251,8 +221,8 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 		return
 	}
 	defer wg.Done()
-	glog.Info("start worker: ", worker)
-	defer glog.Info("exit worker: ", worker)
+	glog.Info("start crawler worker: ", worker)
+	defer glog.Info("exit crawler worker: ", worker)
 	for {
 		select {
 		case <-exitCh:
@@ -278,8 +248,8 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 					continue
 				}
 				now := time.Now().Unix()
-				// add task to RunningDB
-				err = self.AddRunning(now, task)
+				task.NextExecTime = now + 300
+				id, err := self.RunningStore.Insert(&task)
 				if err != nil {
 					glog.Error(err)
 					continue
@@ -292,16 +262,17 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 					continue
 				}
 				// remove task from RunningDB
-				key := time.Unix(now, 0).Format("20060102030405") + ":" + task.Url
-				err = self.RunningDB.Delete([]byte(key), nil)
+				err = self.RunningStore.Delete(id)
 				if err != nil {
 					glog.Error(err)
 				}
 				if parseConf, ok := crawler.Conf.ParseConfs[task.ParserName]; ok {
-					if parseConf.RevisitInterval > 0 {
+					if parseConf.RevisitInterval > 0 && task.IsSeedUrl {
 						// add this task back to cron
 						task.LastAccessTime = now
-						err = self.AddCrontab(now+parseConf.RevisitInterval, task)
+						task.RevisitInterval = parseConf.RevisitInterval
+						task.NextExecTime = now + task.RevisitInterval
+						_, err = self.CrontabStore.Insert(&task)
 						if err != nil {
 							glog.Error(err)
 						}
@@ -311,6 +282,19 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 				for _, t := range tasks {
 					glog.Info("enqueue task:", t)
 					crawler.TaskQueue.EnqueueObject(t)
+					// add SeedUrl to CrontabStore
+					if t.IsSeedUrl {
+						if p, has := crawler.Conf.ParseConfs[t.ParserName]; has {
+							if p.RevisitInterval > 0 {
+								t.RevisitInterval = p.RevisitInterval
+								t.NextExecTime = now + t.RevisitInterval
+								_, err = self.CrontabStore.Insert(&t)
+								if err != nil {
+									glog.Error(err)
+								}
+							}
+						}
+					}
 				}
 				for _, item := range items {
 					crawler.Save(item)

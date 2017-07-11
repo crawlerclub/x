@@ -2,16 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/crawlerclub/x/controller"
 	"github.com/crawlerclub/x/types"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
-)
-
-var (
-	ErrNameExists = errors.New("CrawlerName already exists")
 )
 
 type CrudCrawlerHandler struct {
