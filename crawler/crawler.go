@@ -101,7 +101,7 @@ func (self *Crawler) InitStartTasks() error {
 	}
 	for _, url := range self.Conf.StartUrls {
 		task := types.Task{Url: url, CrawlerName: self.Conf.CrawlerName,
-			ParserName: self.Conf.StartParserName}
+			ParserName: self.Conf.StartParserName, IsSeedUrl: true}
 		if _, err = self.TaskQueue.EnqueueObject(task); err != nil {
 			return err
 		}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/crawlerclub/x/types"
 	_ "github.com/mattn/go-sqlite3"
+	"time"
 )
 
 var (
@@ -92,10 +93,12 @@ func (self *CrawlerDB) cu(item *types.CrawlerItem, action string) error {
 }
 
 func (self *CrawlerDB) Insert(item *types.CrawlerItem) error {
+	item.CreateTime = time.Now().Unix()
 	return self.cu(item, "insert")
 }
 
 func (self *CrawlerDB) Update(item *types.CrawlerItem) error {
+	item.ModifyTime = time.Now().Unix()
 	return self.cu(item, "update")
 }
 

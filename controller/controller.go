@@ -100,6 +100,9 @@ func (self *Controller) DelCrawler(name string) error {
 	if err != nil && err != ErrNameNotFound {
 		return err
 	}
+	if crawler, ok := self.Crawlers[name]; ok {
+		crawler.Close()
+	}
 	delete(self.Crawlers, name)
 	return self.CrawlerStore.DeleteByName(name)
 }
