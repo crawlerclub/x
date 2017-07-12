@@ -34,6 +34,7 @@ type Controller struct {
 }
 
 func (self *Controller) Init(dir string, wc int) error {
+	glog.Info("call Init")
 	if wc <= 0 || wc > 1000 {
 		return ErrWorkerCount
 	}
@@ -71,11 +72,15 @@ func (self *Controller) Init(dir string, wc int) error {
 }
 
 func (self *Controller) runCrawler(item *types.CrawlerItem) error {
+	glog.Info("call runCrawler: ", item.CrawlerName)
 	var crawler crawler.Crawler
 	crawler.Conf = &item.Conf
-	crawler.InitEs()
-	dir := self.workDir + "/queue/" + item.CrawlerName
-	err := crawler.InitTaskQueue(dir)
+	err := crawler.InitEs()
+	if err != nil {
+		return err
+	}
+	dir := self.workDir + "/queue"
+	err = crawler.InitTaskQueue(dir)
 	if err != nil {
 		return err
 	}
@@ -86,6 +91,7 @@ func (self *Controller) runCrawler(item *types.CrawlerItem) error {
 	var sitem Item
 	sitem.CrawlerName = item.CrawlerName
 	sitem.Weight = item.Weight
+	glog.Info("SortedList add ", sitem)
 	err = self.Schduler.Insert(sitem)
 	if err != nil {
 		return err
@@ -115,9 +121,11 @@ func (self *Controller) runCrawler(item *types.CrawlerItem) error {
 }
 
 func (self *Controller) initCrawlersFromDB() error {
+	glog.Info("call initCrawlersFromDB")
 	self.Crawlers = make(map[string]crawler.Crawler)
 	self.Schduler.Init()
 	items, err := self.CrawlerStore.List("WHERE status=?", "enabled")
+	glog.Info("loaded ", len(items), " crawler confs")
 	if err != nil {
 		return err
 	}
@@ -252,6 +260,7 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 			name, err := self.Schduler.WeightedChoice()
 			if err != nil {
 				glog.Error(err)
+				time.Sleep(10 * time.Second)
 				continue
 			}
 			glog.Info(worker, " is working on ", name)

@@ -35,7 +35,7 @@ const (
 	selectByNameCrawlerSql = `SELECT * FROM crawlers WHERE crawler_name=?;`
 	deleteCrawlerSql       = `DELETE FROM crawlers WHERE id=?;`
 	deleteByNameCrawlerSql = `DELETE FROM crawlers WHERE crawler_name=?;`
-	queryCrawlerSql        = `SELECT id, crawler_name, weight, status, create_time, modify_time, author FROM crawlers %s;`
+	queryCrawlerSql        = `SELECT id, crawler_name, weight, status, create_time, modify_time, author, conf FROM crawlers %s;`
 	countCrawlerSql        = `SELECT COUNT(*) FROM crawlers %s;`
 )
 
@@ -205,8 +205,13 @@ func (self *CrawlerDB) List(query string, args ...interface{}) ([]*types.Crawler
 	var items []*types.CrawlerItem
 	for rows.Next() {
 		item := new(types.CrawlerItem)
+		var conf string
 		if err = rows.Scan(&item.Id, &item.CrawlerName, &item.Weight, &item.Status,
-			&item.CreateTime, &item.ModifyTime, &item.Author); err != nil {
+			&item.CreateTime, &item.ModifyTime, &item.Author, &conf); err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal([]byte(conf), &item.Conf)
+		if err != nil {
 			return nil, err
 		}
 		items = append(items, item)

@@ -5,6 +5,14 @@ import (
 	"fmt"
 )
 
+var (
+	ErrEmptyCrawlerName       = errors.New("types/types.go empty crawler_name of crawler conf")
+	ErrUnSupportedCrawlerType = errors.New("types/types.go unsupported crawler_type of crawler conf")
+	ErrEmptyStartUrls         = errors.New("types/types.go empty start_urls of crawler conf")
+	ErrEmptyUrlsFile          = errors.New("types/types.go empty urls_file of crawler conf")
+	ErrNoStartRule            = errors.New("types/types.go empty start task conf rule of crawler conf")
+)
+
 type ParseRule struct {
 	// four RuleTypes: url, dom, string, html
 	RuleType string `json:"rule_type" bson:"rule_type"`
@@ -51,14 +59,6 @@ func (self *CrawlerConf) Type() string {
 func (self *CrawlerConf) Id() string {
 	return self.CrawlerName
 }
-
-var (
-	ErrEmptyCrawlerName       = errors.New("empty crawler_name of crawler conf")
-	ErrUnSupportedCrawlerType = errors.New("unsupported crawler_type of crawler conf")
-	ErrEmptyStartUrls         = errors.New("empty start_urls of crawler conf")
-	ErrEmptyUrlsFile          = errors.New("empty urls_file of crawler conf")
-	ErrNoStartRule            = errors.New("empty start task conf rule of crawler conf")
-)
 
 func (conf *CrawlerConf) IsValid() (bool, error) {
 	if conf.CrawlerName == "" {

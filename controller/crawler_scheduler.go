@@ -65,6 +65,7 @@ func (self *CrawlerScheduler) Insert(item Item) error {
 		return ErrNilList
 	}
 	self.crawlerList.Insert(item)
+	self.totalWeight += item.Weight
 	return nil
 }
 
@@ -79,6 +80,7 @@ func (self *CrawlerScheduler) Remove(name string) error {
 		next = e.Next()
 		if e.Value.(Item).CrawlerName == name {
 			self.crawlerList.Remove(e)
+			self.totalWeight -= e.Value.(Item).Weight
 			return nil
 		}
 	}
