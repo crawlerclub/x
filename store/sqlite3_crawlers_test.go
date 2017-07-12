@@ -22,10 +22,6 @@ func TestCrawlerDB(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = e.CreateTables()
-	if err != nil {
-		t.Error(err)
-	}
 	err = e.Insert(&item)
 	if err != nil {
 		t.Error(err)

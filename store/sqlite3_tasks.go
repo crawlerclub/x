@@ -16,7 +16,7 @@ var (
 const (
 	setupTaskSql = `CREATE TABLE IF NOT EXISTS tasks (
 		id INTEGER PRIMARY KEY,
-		crawler_name TEXT UNIQUE NOT NULL,
+		crawler_name TEXT NOT NULL,
 		parser_name TEXT NOT NULL,
 		is_seed_url INTEGER NOT NULL DEFAULT 1,
 		url TEXT NOT NULL DEFAULT "",
@@ -32,7 +32,7 @@ const (
 	CREATE INDEX IF NOT EXISTS next_exec_time_index on tasks(next_exec_time);
 	`
 
-	insertTaskSql = `INSERT INTO tasks(crawler_name, parser_name, is_seed_url, url, data, status, last_access_time, revisit_interval) VALUES(?, ?, ?, ?, ?, ?, ?, ?);`
+	insertTaskSql = `INSERT INTO tasks(crawler_name, parser_name, is_seed_url, url, data, status, last_access_time, revisit_interval, next_exec_time) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	updateTaskSql = `UPDATE tasks SET crawler_name=?, parser_name=?, is_seed_url=?, url=?, data=?, status=?, last_access_time=?, revisit_interval=? WHERE id=?;`
 	selectTaskSql = `SELECT * FROM tasks WHERE id=?;`
 	deleteTaskSql = `DELETE FROM tasks WHERE id=?;`
@@ -86,7 +86,7 @@ func (self *TaskDB) cu(item *types.Task, action string) (int64, error) {
 			item.Url, item.Data, item.Status, item.LastAccessTime,
 			item.RevisitInterval, item.NextExecTime)
 		if err != nil {
-			return 0, nil
+			return 0, err
 		}
 		return result.LastInsertId()
 	} else {

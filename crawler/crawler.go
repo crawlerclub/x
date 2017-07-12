@@ -88,27 +88,6 @@ func (self *Crawler) Close() {
 	}
 }
 
-func (self *Crawler) InitStartTasks() error {
-	if self.Conf == nil {
-		return ErrEmptyCrawlerConf
-	}
-	ok, err := self.Conf.IsValid()
-	if !ok {
-		return err
-	}
-	if self.TaskQueue == nil {
-		return ErrNilTaskQueue
-	}
-	for _, url := range self.Conf.StartUrls {
-		task := types.Task{Url: url, CrawlerName: self.Conf.CrawlerName,
-			ParserName: self.Conf.StartParserName, IsSeedUrl: true}
-		if _, err = self.TaskQueue.EnqueueObject(task); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (self *Crawler) Process(task *types.Task) ([]types.Task, []map[string]interface{}, error) {
 	if task == nil {
 		return nil, nil, ErrNilTask

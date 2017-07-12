@@ -26,6 +26,7 @@ type Controller struct {
 	CrawlerStore *store.CrawlerDB
 	RunningStore *store.TaskDB
 	CrontabStore *store.TaskDB
+	LinkStore    *store.LinkDB
 	WorkerCount  int
 
 	workDir  string
@@ -57,11 +58,59 @@ func (self *Controller) Init(dir string, wc int) error {
 	if err != nil {
 		return err
 	}
+	self.LinkStore, err = store.NewLinkDB("sqlite3", dir+"/link.sqlite3")
+	if err != nil {
+		return err
+	}
 	err = self.initCrawlersFromDB()
 	if err != nil {
 		return err
 	}
 	self.isInited = true
+	return nil
+}
+
+func (self *Controller) runCrawler(item *types.CrawlerItem) error {
+	var crawler crawler.Crawler
+	crawler.Conf = &item.Conf
+	crawler.InitEs()
+	dir := self.workDir + "/queue/" + item.CrawlerName
+	err := crawler.InitTaskQueue(dir)
+	if err != nil {
+		return err
+	}
+	if _, ok := self.Crawlers[item.CrawlerName]; ok {
+		self.Schduler.Remove(item.CrawlerName)
+	}
+	self.Crawlers[item.CrawlerName] = crawler
+	var sitem Item
+	sitem.CrawlerName = item.CrawlerName
+	sitem.Weight = item.Weight
+	err = self.Schduler.Insert(sitem)
+	if err != nil {
+		return err
+	}
+	for _, url := range item.Conf.StartUrls {
+		if has, _ := self.LinkStore.Has(url); has {
+			continue
+		}
+		task := types.Task{Url: url, CrawlerName: item.Conf.CrawlerName,
+			ParserName: item.Conf.StartParserName, IsSeedUrl: false}
+		p, _ := item.Conf.ParseConfs[item.Conf.StartParserName]
+		if p.RevisitInterval > 0 {
+			task.IsSeedUrl = true
+			task.RevisitInterval = p.RevisitInterval
+			task.NextExecTime = time.Now().Unix() + task.RevisitInterval
+			id, err := self.CrontabStore.Insert(&task)
+			if err != nil {
+				return err
+			}
+			task.Id = id
+		}
+		if _, err = crawler.TaskQueue.EnqueueObject(task); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -73,21 +122,7 @@ func (self *Controller) initCrawlersFromDB() error {
 		return err
 	}
 	for _, item := range items {
-		var crawler crawler.Crawler
-		crawler.Conf = &item.Conf
-		crawler.InitEs()
-
-		dir := self.workDir + "/queue/" + item.CrawlerName
-		err = crawler.InitTaskQueue(dir)
-		if err != nil {
-			return err
-		}
-		self.Crawlers[item.CrawlerName] = crawler
-
-		var sitem Item
-		sitem.CrawlerName = item.CrawlerName
-		sitem.Weight = item.Weight
-		err = self.Schduler.Insert(sitem)
+		err = self.runCrawler(item)
 		if err != nil {
 			return err
 		}
@@ -127,25 +162,7 @@ func (self *Controller) AddCrawler(item *types.CrawlerItem, isNew bool) error {
 		return err
 	}
 	if item.Status == "enabled" && item.Weight > 0 {
-		var crawler crawler.Crawler
-		crawler.Conf = &item.Conf
-		crawler.InitEs()
-
-		dir := self.workDir + "/queue/" + item.CrawlerName
-		err = crawler.InitTaskQueue(dir)
-		if err != nil {
-			return err
-		}
-		self.Crawlers[item.CrawlerName] = crawler
-
-		err = self.Schduler.Remove(item.CrawlerName)
-		if err != nil && err != ErrNameNotFound {
-			return err
-		}
-		var sitem Item
-		sitem.CrawlerName = item.CrawlerName
-		sitem.Weight = item.Weight
-		err = self.Schduler.Insert(sitem)
+		err = self.runCrawler(item)
 		if err != nil {
 			return err
 		}
@@ -204,7 +221,7 @@ func (self *Controller) enqueueTask(wg *sync.WaitGroup, exitCh chan int, name st
 					glog.Error("no crawler for task.CrawlerName: ", task.CrawlerName)
 				}
 			}
-			// every 60 seconds
+			// every 5 seconds
 			time.Sleep(5 * time.Second)
 		}
 	}
@@ -257,7 +274,6 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 					glog.Error(err)
 					continue
 				}
-
 				glog.Info("process task:", task)
 				tasks, items, err := crawler.Process(&task)
 				if err != nil {
@@ -275,18 +291,19 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 						task.LastAccessTime = now
 						task.RevisitInterval = parseConf.RevisitInterval
 						task.NextExecTime = now + task.RevisitInterval
-						_, err = self.CrontabStore.Insert(&task)
+						_, err = self.CrontabStore.Update(&task)
 						if err != nil {
 							glog.Error(err)
 						}
 					}
 				}
-
 				for _, t := range tasks {
 					glog.Info("enqueue task:", t)
-					crawler.TaskQueue.EnqueueObject(t)
 					// add SeedUrl to CrontabStore
 					if t.IsSeedUrl {
+						if has, _ := self.LinkStore.Has(t.Url); has {
+							continue
+						}
 						if p, has := crawler.Conf.ParseConfs[t.ParserName]; has {
 							if p.RevisitInterval > 0 {
 								t.RevisitInterval = p.RevisitInterval
@@ -298,6 +315,7 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 							}
 						}
 					}
+					crawler.TaskQueue.EnqueueObject(t)
 				}
 				for _, item := range items {
 					crawler.Save(item)
@@ -305,7 +323,6 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 			} else {
 				glog.Error("No crawler named: ", name)
 			}
-			//time.Sleep(1 * time.Second)
 		}
 	}
 }
