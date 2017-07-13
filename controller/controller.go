@@ -220,11 +220,15 @@ func (self *Controller) enqueueTask(wg *sync.WaitGroup, exitCh chan int, name st
 				if crawler, ok := self.Crawlers[task.CrawlerName]; ok {
 					crawler.TaskQueue.EnqueueObject(task)
 					if name == "retry" {
-						self.RunningStore.Delete(task.Id)
+						err = self.RunningStore.Delete(task.Id)
 					} else {
 						task.LastAccessTime = now
 						task.NextExecTime = now + task.RevisitInterval
-						self.CrontabStore.Update(task)
+						_, err = self.CrontabStore.Update(task)
+					}
+					if err != nil {
+						glog.Error(err)
+						return
 					}
 				} else {
 					glog.Error("no crawler for task.CrawlerName: ", task.CrawlerName)
