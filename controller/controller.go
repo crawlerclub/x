@@ -205,9 +205,9 @@ func (self *Controller) enqueueTask(wg *sync.WaitGroup, exitCh chan int, name st
 			var tasks []*types.Task
 			var err error
 			if name == "cron" {
-				tasks, err = self.CrontabStore.List("WHERE next_exec_time>?", now)
+				tasks, err = self.CrontabStore.List("WHERE next_exec_time<?", now)
 			} else if name == "retry" {
-				tasks, err = self.RunningStore.List("WHERE next_exec_time>?", now)
+				tasks, err = self.RunningStore.List("WHERE next_exec_time<?", now)
 			} else {
 				glog.Error("unknown worker: ", name)
 				return
@@ -219,6 +219,7 @@ func (self *Controller) enqueueTask(wg *sync.WaitGroup, exitCh chan int, name st
 			for _, task := range tasks {
 				if crawler, ok := self.Crawlers[task.CrawlerName]; ok {
 					crawler.TaskQueue.EnqueueObject(task)
+					glog.Info(task.Id, task)
 					if name == "retry" {
 						err = self.RunningStore.Delete(task.Id)
 					} else {
