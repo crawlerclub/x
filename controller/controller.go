@@ -194,7 +194,7 @@ func (self *Controller) enqueueTask(wg *sync.WaitGroup, exitCh chan int, name st
 	}
 	defer wg.Done()
 	glog.Info("start ", name, " worker")
-	defer glog.Info("exit ", name, "worker")
+	defer glog.Info("exit ", name, " worker")
 	for {
 		select {
 		case <-exitCh:

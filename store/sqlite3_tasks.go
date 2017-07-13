@@ -173,8 +173,9 @@ func (self *TaskDB) List(query string, args ...interface{}) ([]*types.Task, erro
 	for rows.Next() {
 		item := new(types.Task)
 		if err = rows.Scan(&item.Id, &item.CrawlerName, &item.ParserName,
-			&item.IsSeedUrl, &item.Url, &item.Data, &item.LastAccessTime,
-			&item.RevisitInterval); err != nil {
+			&item.IsSeedUrl, &item.Url, &item.Data, &item.Status,
+			&item.LastAccessTime, &item.RevisitInterval,
+			&item.NextExecTime); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
