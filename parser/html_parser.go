@@ -30,20 +30,20 @@ func (parser HtmlParser) String() string {
 	return parser.Name
 }
 
-func (parser HtmlParser) parseNodeByRule(node interface{}, rule types.ParseRule, pageUrl string) ([]interface{}, error) {
+func (parser HtmlParser) parseNodeByRule(
+	node interface{},
+	rule types.ParseRule,
+	pageUrl string) ([]interface{}, error) {
 	if len(rule.RuleType) == 0 {
 		return nil, ErrEmptyRuleType
 	}
 	if len(rule.Xpath) == 0 {
 		return nil, ErrEmptyXpath
 	}
-
 	var ret []interface{}
-
 	nodes, err := node.(t.Node).Find(rule.Xpath)
 	// zliu
 	defer nodes.Free()
-
 	if err != nil {
 		return nil, err
 	}
@@ -112,17 +112,18 @@ func (parser HtmlParser) parseNodeByRule(node interface{}, rule types.ParseRule,
 	return ret, err
 }
 
-func (parser HtmlParser) parseNode(node interface{}, rules []types.ParseRule, pageUrl string) ([]*DOMNode, []types.Task, map[string]interface{}, error) {
+func (parser HtmlParser) parseNode(
+	node interface{},
+	rules []types.ParseRule,
+	pageUrl string) ([]*DOMNode, []types.Task, map[string]interface{}, error) {
 	var retDOMs []*DOMNode
 	var retUrls []types.Task
 	retItems := make(map[string]interface{})
-
 	// we may get different items from one node, so need multiple rules
 	for _, rule := range rules {
 		if len(rule.ItemKey) == 0 {
 			return nil, nil, nil, ErrEmptyItemKey
 		}
-
 		vals, err := parseNodeByRule(node, rule, pageUrl)
 		if err != nil {
 			return nil, nil, nil, err
@@ -169,7 +170,9 @@ func (parser HtmlParser) parseNode(node interface{}, rules []types.ParseRule, pa
 	return retDOMs, retUrls, retItems, nil
 }
 
-func (parser HtmlParser) Parse(page, pageUrl string, parseConf *types.ParseConf) ([]types.Task, []map[string]interface{}, error) {
+func (parser HtmlParser) Parse(
+	page, pageUrl string,
+	parseConf *types.ParseConf) ([]types.Task, []map[string]interface{}, error) {
 	if parseConf == nil {
 		return nil, nil, errors.New("parse conf is nil")
 	}

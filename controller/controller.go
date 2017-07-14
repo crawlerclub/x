@@ -298,10 +298,10 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 				}
 				for _, t := range tasks {
 					glog.Info("enqueue task:", t)
-					// add SeedUrl to Seed and Crontab
+					// add SeedUrl to Seed
 					if t.IsSeedUrl {
 						value, _ = store.ObjectToBytes(t)
-						self.Stores["seed"].Put(task.Id(), value)
+						self.Stores["seed"].Put(t.Id(), value)
 					}
 					crawler.TaskQueue.EnqueueObject(t)
 				}

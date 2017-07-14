@@ -88,7 +88,8 @@ func (self *Crawler) Close() {
 	}
 }
 
-func (self *Crawler) Process(task *types.Task) ([]types.Task, []map[string]interface{}, error) {
+func (self *Crawler) Process(
+	task *types.Task) ([]types.Task, []map[string]interface{}, error) {
 	if task == nil {
 		return nil, nil, ErrNilTask
 	}
@@ -98,7 +99,8 @@ func (self *Crawler) Process(task *types.Task) ([]types.Task, []map[string]inter
 	if urlParser, ok := self.Conf.ParseConfs[task.ParserName]; ok {
 		uParser := parser.GetParser(urlParser.ParserType)
 		if uParser == nil {
-			return nil, nil, errors.New(fmt.Sprintf("no parser_type %s found!", urlParser.ParserType))
+			return nil, nil, errors.New(
+				fmt.Sprintf("no parser_type %s found!", urlParser.ParserType))
 		}
 		req := &types.HttpRequest{Url: task.Url, Platform: "pc", Timeout: 60}
 		resp := downloader.Download(req)
@@ -136,7 +138,8 @@ func (self *Crawler) Process(task *types.Task) ([]types.Task, []map[string]inter
 		}
 		return tasks, items, err
 	} else {
-		return nil, nil, errors.New(fmt.Sprintf("No ParseConf for %s", task.ParserName))
+		return nil, nil, errors.New(
+			fmt.Sprintf("No ParseConf for %s", task.ParserName))
 	}
 }
 
