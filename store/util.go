@@ -2,7 +2,9 @@ package store
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/gob"
+	"encoding/hex"
 )
 
 func ObjectToBytes(object interface{}) ([]byte, error) {
@@ -21,4 +23,10 @@ func BytesToObject(value []byte, object interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func MD5(text string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	return hex.EncodeToString(hasher.Sum(nil))
 }

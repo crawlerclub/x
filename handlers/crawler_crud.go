@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"github.com/crawlerclub/x/controller"
+	"github.com/crawlerclub/x/store"
 	"github.com/crawlerclub/x/types"
 	"github.com/gorilla/mux"
 	"io/ioutil"
@@ -18,10 +19,11 @@ func NewCrudCrawlerHandler(ctl *controller.Controller) *CrudCrawlerHandler {
 }
 
 func (self *CrudCrawlerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if self.ctl == nil || self.ctl.CrawlerStore == nil {
+	if self.ctl == nil || self.ctl.Stores == nil {
 		showError(w, r, "controller is nil", 500)
 		return
 	}
+
 	vars := mux.Vars(r)
 	switch vars["action"] {
 	case "create":
@@ -32,8 +34,10 @@ func (self *CrudCrawlerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		}
 		ok(w)
 	case "retrieve":
-		item, err := self.ctl.CrawlerStore.SelectByName(vars["name"])
+		bytes, err := self.ctl.Stores["crawler"].Get(vars["name"])
 		if err == nil {
+			var item types.CrawlerItem
+			store.BytesToObject(bytes, &item)
 			mustEncode(w, item)
 		} else {
 			showError(w, r, err.Error(), 500)
