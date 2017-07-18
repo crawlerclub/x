@@ -7,6 +7,7 @@ import (
 	"github.com/crawlerclub/x/handlers"
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
+	_ "github.com/mkevac/debugcharts"
 	"net/http"
 	_ "net/http/pprof"
 )
