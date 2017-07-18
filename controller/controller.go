@@ -182,6 +182,12 @@ func (self *Controller) UpdateCrawler(item *types.CrawlerItem, isNew bool) error
 	if !isNew && !has {
 		return ErrNoName
 	}
+	now := time.Now().Unix()
+	if isNew {
+		item.CreateTime = now
+	} else {
+		item.ModifyTime = now
+	}
 	value, err := store.ObjectToBytes(item)
 	if err != nil {
 		return err
@@ -192,12 +198,10 @@ func (self *Controller) UpdateCrawler(item *types.CrawlerItem, isNew bool) error
 	}
 	if item.Status == "enabled" && item.Weight > 0 {
 		err = self.runCrawler(item)
-		if err != nil {
-			return err
-		}
 	} else {
+		err = self.CloseCrawler(item.CrawlerName)
 	}
-	return nil
+	return err
 }
 
 func (self *Controller) Finish() {
