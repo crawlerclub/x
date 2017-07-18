@@ -73,5 +73,5 @@ func (self *CrudCrawlerHandler) saveCrawlerItem(r *http.Request, isNew bool) err
 	if err != nil {
 		return err
 	}
-	return self.ctl.AddCrawler(&item, isNew)
+	return self.ctl.UpdateCrawler(&item, isNew)
 }

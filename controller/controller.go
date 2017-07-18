@@ -141,7 +141,7 @@ func (self *Controller) initCrawlersFromDB() error {
 	return nil
 }
 
-func (self *Controller) DelCrawler(name string) error {
+func (self *Controller) CloseCrawler(name string) error {
 	err := self.Schduler.Remove(name)
 	if err != nil && err != ErrNameNotFound {
 		return err
@@ -150,10 +150,18 @@ func (self *Controller) DelCrawler(name string) error {
 		crawler.Close()
 	}
 	delete(self.Crawlers, name)
+	return nil
+}
+
+func (self *Controller) DelCrawler(name string) error {
+	err := self.CloseCrawler(name)
+	if err != nil {
+		return err
+	}
 	return self.Stores["crawler"].Delete(name)
 }
 
-func (self *Controller) AddCrawler(item *types.CrawlerItem, isNew bool) error {
+func (self *Controller) UpdateCrawler(item *types.CrawlerItem, isNew bool) error {
 	if item == nil {
 		return ErrNilCrawlerItem
 	}
@@ -187,6 +195,7 @@ func (self *Controller) AddCrawler(item *types.CrawlerItem, isNew bool) error {
 		if err != nil {
 			return err
 		}
+	} else {
 	}
 	return nil
 }
