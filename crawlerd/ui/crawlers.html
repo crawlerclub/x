@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>CRAWLERS</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <link rel="stylesheet" href="./bootstrap3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./css/AdminLTE.min.css">
+    <link href="./bootstrap-table/bootstrap-table.css" rel="stylesheet" />
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.2/html5shiv.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/json2/20140204/json2.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+  <section class="content-header">
+    <h1>CRAWLERS<small>edit crawler configurations</small></h1>
+    <ol class="breadcrumb">
+      <li><a href="/"><i class="fa fa-dashboard"></i>Home</a></li>
+      <li class="active">crawlers</li>
+    </ol>
+  </section>
+  <section class="content" style="padding-top:0px;">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="box-body" style="padding:0px;">
+          <div id="toolbar">
+            <button id="addnew" class="btn btn-default"><i class="glyphicon glyphicon-file"></i></button>
+          </div>
+          <table class="table table-condensed" id="table"
+            data-toolbar="#toolbar"
+            data-show-refresh="true"
+            data-show-toggle="true"
+            data-show-export="true"
+            data-pagination="true"
+            data-side-pagination="server"
+            data-url="/api/list/crawler"
+            data-response-handler="responseHandler">
+          </table>
+        </div>
+      </div>
+    </div>     
+  </section>
+  <script src="./js/jquery-3.2.1.min.js"></script>
+  <script src="./bootstrap3.3.7/js/bootstrap.min.js"></script>
+  <script src="./crawlers.js"></script>
+</body>
+</html>

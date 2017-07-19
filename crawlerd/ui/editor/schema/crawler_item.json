@@ -1,0 +1,29 @@
+{
+  "title": "crawler_item",
+  "type": "object",
+  "id": "crawler_item",
+  "format": "grid",
+  "properties": {
+    "crawler_name": {
+      "type": "string",
+      "options": {"grid_columns": 3},
+      "minLength": 4
+    },
+    "conf": {
+      "$ref": "./schema/crawler_conf.json"
+    },
+    "status": {
+      "type": "string",
+      "options": {"grid_columns": 3},
+      "enum": ["enabled", "disabled"]
+    },
+    "weight": {
+      "type": "integer",
+      "options": {"grid_columns": 3}
+    },
+    "author": {
+      "type":"string",
+      "options": {"grid_columns": 3}
+    }
+  }
+}

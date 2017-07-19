@@ -1,0 +1,52 @@
+{
+  "type": "object",
+  "id": "parse_conf",
+  "format": "grid",
+  "properties": {
+    "parser_name": {
+      "options": { "grid_columns": 2 },
+      "type": "string"
+    },
+    "parser_type": {
+      "options": { "grid_columns": 2 },
+      "type": "string",
+      "enum": [
+        "html",
+        "xml",
+        "json",
+        "content"
+      ]
+    },
+    "example_url": {
+      "options": { "grid_columns": 4 },
+      "type": "string",
+      "format": "url"
+    },
+    "no_default_fields": {
+      "options": { "grid_columns": 2 },
+      "type": "boolean"
+    },
+    "revisit_interval": {
+      "options": { "grid_columns": 2 },
+      "type": "integer"
+    },
+    "rules": {
+      "type": "object",
+      "options": { "grid_columns": 12, "disable_properties": false },
+      "patternProperties": {
+        ".+": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "./schema/parse_rule.json"
+          }
+        }
+      }
+    },
+    "post_processor": {
+      "options": { "grid_columns": 12 },
+      "type": "string",
+      "format": "javascript"
+    }
+  }
+}

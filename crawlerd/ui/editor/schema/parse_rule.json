@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "id": "parse_rule",
+  "format": "grid",
+  "properties": {
+    "rule_type": {
+      "options": { "grid_columns": 2 },
+      "type": "string",
+      "enum": [
+        "string",
+        "dom",
+        "url",
+        "html"
+      ]
+    },
+    "item_key": {
+      "options": { "grid_columns": 7 },
+      "type": "string"
+    },
+    "is_seed_url": {
+      "options": { "grid_columns": 3 },
+      "type": "boolean"
+    },
+    "xpath": {
+      "options": { "grid_columns": 12 },
+      "type": "string"
+    },
+    "regex": {
+      "options": { "grid_columns": 12 },
+      "type": "string"
+    },
+    "js": {
+      "options": { "grid_columns": 12 },
+      "type": "string",
+      "format": "javascript"
+    }
+  }
+}
