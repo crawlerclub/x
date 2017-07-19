@@ -23,8 +23,8 @@ func Web(ctl *controller.Controller, addr string) {
 	crudHandler := handlers.NewCrudCrawlerHandler(ctl)
 	router.Handle("/api/crawler/{action:create|retrieve|update|delete}/{name}",
 		crudHandler)
-	listHandler := handlers.NewListCrawlerHandler(ctl)
-	router.Handle("/api/list/crawler", listHandler)
+	listHandler := handlers.NewListHandler(ctl)
+	router.Handle("/api/list/{type:seed|running|crontab|crawler}", listHandler)
 	http.Handle("/api/", router)
 	http.Handle("/", http.FileServer(rice.MustFindBox("http-files").HTTPBox()))
 	http.ListenAndServe(addr, nil)
