@@ -128,9 +128,11 @@ func (self *Controller) initCrawlersFromDB() error {
 		if e != nil {
 			return false, e
 		}
-		e = self.runCrawler(&item)
-		if e != nil {
-			return false, nil
+		if item.Status == "enabled" {
+			e = self.runCrawler(&item)
+			if e != nil {
+				return false, nil
+			}
 		}
 		return true, nil
 	})
