@@ -41,6 +41,9 @@ function responseHandler(res) {
 
 function operateFormatter(value, row, index) {
     return [
+        '<a class="test" href="javascript:void(0)" title="Test">',
+        '<i class="glyphicon glyphicon-expand"></i>',
+        '</a>  ',
         '<a class="edit" href="javascript:void(0)" title="Edit">',
         '<i class="glyphicon glyphicon-edit"></i>',
         '</a>  ',
@@ -58,6 +61,7 @@ function timeFormatter(value, row, index) {
 $('#addnew').click(function () { window.open("/editor/"); });
 
 window.operateEvents = {
+    'click .test': function (e, value, row, index) { window.open("/test.html?name=" + row.crawler_name); },
     'click .edit': function (e, value, row, index) { window.open("/editor/?name=" + row.crawler_name); },
     'click .remove': function (e, value, row, index) {
         $.ajax({

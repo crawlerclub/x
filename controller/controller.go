@@ -121,6 +121,7 @@ func (self *Controller) initCrawlersFromDB() error {
 
 	crawlerStore := self.Stores["crawler"]
 	count := 0
+	enabled := 0
 	err := crawlerStore.ForEach(nil, func(key, value []byte) (bool, error) {
 		count += 1
 		var item types.CrawlerItem
@@ -129,6 +130,7 @@ func (self *Controller) initCrawlersFromDB() error {
 			return false, e
 		}
 		if item.Status == "enabled" {
+			enabled += 1
 			e = self.runCrawler(&item)
 			if e != nil {
 				return false, nil
@@ -139,7 +141,7 @@ func (self *Controller) initCrawlersFromDB() error {
 	if err != nil {
 		return err
 	}
-	glog.Info("loaded ", count, " crawler items")
+	glog.Info("loaded ", count, " crawler items, ", enabled, " enabled")
 	return nil
 }
 

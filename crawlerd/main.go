@@ -25,6 +25,9 @@ func Web(ctl *controller.Controller, addr string) {
 		crudHandler)
 	listHandler := handlers.NewListHandler(ctl)
 	router.Handle("/api/list/{type:seed|running|crontab|crawler}", listHandler)
+	testHandler := handlers.NewTestHandler(ctl)
+	router.Handle("/api/test/{name}", testHandler)
+
 	http.Handle("/api/", router)
 	http.Handle("/", http.FileServer(rice.MustFindBox("ui").HTTPBox()))
 	http.ListenAndServe(addr, nil)

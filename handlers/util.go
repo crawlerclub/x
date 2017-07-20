@@ -13,7 +13,7 @@ func showError(w http.ResponseWriter, r *http.Request, msg string, code int) {
 
 func mustEncode(w http.ResponseWriter, i interface{}) {
 	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Content-type", "application/json")
+	w.Header().Set("Content-type", "application/json;charset=utf-8")
 	e := json.NewEncoder(w)
 	if err := e.Encode(i); err != nil {
 		panic(err)

@@ -168,3 +168,24 @@ func (self *Crawler) Save(item map[string]interface{}) error {
 	}
 	return nil
 }
+
+func (self *Crawler) Test() (map[string]interface{}, error) {
+	if self.Conf == nil {
+		return nil, ErrEmptyCrawlerConf
+	}
+	ret := make(map[string]interface{})
+	for k, v := range self.Conf.ParseConfs {
+		t := &types.Task{ParserName: k, Url: v.ExampleUrl}
+		tasks, items, err := self.Process(t)
+		ret[k] = struct {
+			Tasks []types.Task             `json:"tasks"`
+			Items []map[string]interface{} `json:"items"`
+			Error error                    `json:"error"`
+		}{
+			Tasks: tasks,
+			Items: items,
+			Error: err,
+		}
+	}
+	return ret, nil
+}

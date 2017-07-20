@@ -1,11 +1,3 @@
-
-function GetQueryString(name) {
-  var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
-  var r = window.location.search.substr(1).match(reg);
-  if (r != null) return unescape(r[2]);
-  return null;
-}
-
 // Initialize the editor with a JSON schema
 var editor = new JSONEditor(document.getElementById('editor_holder'), {
   ajax: true, disable_properties: true,
@@ -49,7 +41,7 @@ editor.on('change',function() {
   var errors = editor.validate();
   if (errors.length) {
     indicator.style.color = 'red';
-    indicator.textContent = "not valid";
+    indicator.textContent = "invalid";
   } else {
     indicator.style.color = 'green';
     indicator.textContent = "valid";
