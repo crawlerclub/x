@@ -5,11 +5,13 @@ function initTable() {
         striped: true, height: getHeight(),
         columns: [ [ 
             { field: 'crawler_name', title: 'CrawlerName', align: 'center', valign: 'middle'},
-            { field: 'status', title: 'Status', align: 'center', valign: 'middle' },
+            { field: 'crawler_type', title: 'Type', align: 'center', valign: 'middle'},
+            { field: 'crawler_desp', title: 'Desc', align: 'center', valign: 'middle'},
             { field: 'weight', title: 'Weight', align: 'center', valign: 'middle' },
             { field: 'author', title: 'Author', align: 'center', valign: 'middle' },
             { field: 'create_time', title: 'CreateTime', align: 'center', valign: 'middle', formatter: timeFormatter },
             { field: 'modify_time', title: 'ModifyTime', align: 'center', valign: 'middle', formatter: timeFormatter },
+            { field: 'status', title: 'Status', align: 'center', valign: 'middle' },
             { field: 'operate', title: 'Operate', align: 'center', valign: 'middle', events: operateEvents, formatter: operateFormatter }
         ] ]
     });
@@ -35,6 +37,8 @@ function initTable() {
 function responseHandler(res) {
     $.each(res.rows, function (i, row) {
         //alert(row.author);
+        row.crawler_type = row.conf.crawler_type;
+        row.crawler_desp = row.conf.crawler_desp;
     });
     return res;
 }
