@@ -13,6 +13,7 @@ $(document).ready(function() {
 });
 
 function testCrawler(name) {
+    $('#editor_holder').html("<h4>loading...</h4>");
     $.ajax({
         url: "/api/crawler/retrieve/"+name, cache: false,
         success: function(result) {
