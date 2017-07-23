@@ -5,14 +5,23 @@
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
     <title>Crawler Conf viewer</title>
     <link rel='stylesheet' href='./bootstrap3.3.7/css/bootstrap.min.css'>
+    <link rel="stylesheet" href="./css/AdminLTE.min.css">
     <link rel='stylesheet' href='./css/json-viewer.css'>
     <script src="./js/jquery-3.2.1.min.js"></script>
     <script src="./js/json-viewer.js"></script>
     <script src="./js/util.js"></script>
   </head>
   <body>
-    <div class="container">
-        <div class='row' style="margin-top:10px;">
+    <section class="content-header">
+      <h1>View<small>crawler configuration</small></h1>
+      <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i>Home</a></li>
+        <li class="active">view</li>
+      </ol>
+    </section>
+
+    <section class="content" style="margin-top:2px;margin-left:10px;margin-right:10px;">
+        <div class='row'>
             <div class="form-group">
                 <div class="input-group">
                     <div class="input-group-addon">CrawlerName</div>
@@ -24,7 +33,7 @@
         <div class="row">
             <div id='editor_holder'></div>
         </div>
-    </div>
+    </section>
     <script src="view.js"></script>
   </body>
 </html>
