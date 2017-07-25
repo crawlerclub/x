@@ -78,7 +78,7 @@ func (self *LevelStore) ForEach(slice *util.Range,
 	if self.db == nil {
 		return ErrNilLevelDB
 	}
-	iter := self.db.NewIterator(nil, nil)
+	iter := self.db.NewIterator(slice, nil)
 	for iter.Next() {
 		cont, err := callback(iter.Key(), iter.Value())
 		if err != nil {

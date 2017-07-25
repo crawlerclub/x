@@ -81,6 +81,7 @@ func (self *Controller) runCrawler(item *types.CrawlerItem) error {
 	dir := self.workDir + "/queue"
 	err = crawler.InitTaskQueue(dir)
 	if err != nil {
+		glog.Error(err)
 		return err
 	}
 	if _, ok := self.Crawlers[item.CrawlerName]; ok {
@@ -93,6 +94,7 @@ func (self *Controller) runCrawler(item *types.CrawlerItem) error {
 	glog.Info("SortedList add ", sitem)
 	err = self.Schduler.Insert(sitem)
 	if err != nil {
+		glog.Error(err)
 		return err
 	}
 	for _, url := range item.Conf.StartUrls {
@@ -105,13 +107,44 @@ func (self *Controller) runCrawler(item *types.CrawlerItem) error {
 		if ret, _ := self.Stores["seed"].Has(task.Id()); !ret {
 			// enqueue new start urls
 			if _, err = crawler.TaskQueue.EnqueueObject(task); err != nil {
+				glog.Error(err)
 				return err
 			}
 		}
 		value, _ := store.ObjectToBytes(task)
 		self.Stores["seed"].Put(task.Id(), value) // update seed
 	}
-	return nil
+
+	// process seeds
+	prefix := util.BytesPrefix([]byte(item.CrawlerName + "\t"))
+	err = self.Stores["seed"].ForEach(prefix, func(key, value []byte) (bool, error) {
+		var t types.Task
+		e := store.BytesToObject(value, &t)
+		if e != nil {
+			glog.Error(e)
+			return false, e
+		}
+		if p, ok := item.Conf.ParseConfs[t.ParserName]; ok {
+			if p.RevisitInterval != t.RevisitInterval {
+				t.RevisitInterval = p.RevisitInterval
+				v, e := store.ObjectToBytes(t)
+				if e != nil {
+					return false, e
+				}
+				self.Stores["seed"].Put(t.Id(), v)
+				if p.RevisitInterval > 0 {
+					if _, e = crawler.TaskQueue.EnqueueObject(t); e != nil {
+						return false, e
+					}
+				}
+			}
+		}
+		return true, nil
+	})
+	if err != nil {
+		glog.Error(err)
+	}
+	return err
 }
 
 func (self *Controller) initCrawlersFromDB() error {
@@ -198,12 +231,16 @@ func (self *Controller) UpdateCrawler(item *types.CrawlerItem, isNew bool) error
 	}
 	err = self.Stores["crawler"].Put(item.CrawlerName, value)
 	if err != nil {
+		glog.Error(err)
+		return err
+	}
+	err = self.CloseCrawler(item.CrawlerName)
+	if err != nil {
+		glog.Error(err)
 		return err
 	}
 	if item.Status == "enabled" && item.Weight > 0 {
 		err = self.runCrawler(item)
-	} else {
-		err = self.CloseCrawler(item.CrawlerName)
 	}
 	return err
 }
@@ -281,6 +318,7 @@ func (self *Controller) startWorker(worker int, wg *sync.WaitGroup, exitCh chan 
 				item, err := crawler.TaskQueue.Dequeue()
 				if err != nil {
 					glog.Error(err)
+					time.Sleep(20 * time.Second)
 					continue
 				}
 				var task types.Task

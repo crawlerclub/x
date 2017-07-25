@@ -11,6 +11,7 @@ import (
 
 var (
 	ErrNilList      = errors.New("SortedList is nil")
+	ErrTotalWeight  = errors.New("SortedList totalWeight 0")
 	ErrNeverHappen  = errors.New("weighted random selection error")
 	ErrNameNotFound = errors.New("crawler name not found")
 )
@@ -42,12 +43,15 @@ func (self *CrawlerScheduler) Init() {
 }
 
 func (self *CrawlerScheduler) WeightedChoice() (string, error) {
-	if self.crawlerList == nil || self.totalWeight <= 0 {
+	if self.crawlerList == nil {
 		return "", ErrNilList
 	}
 	rand.Seed(time.Now().UTC().UnixNano())
 	self.Lock()
 	defer self.Unlock()
+	if self.totalWeight <= 0 {
+		return "", ErrTotalWeight
+	}
 	rnd := rand.Intn(self.totalWeight)
 	for e := self.crawlerList.Front(); e != nil; e = e.Next() {
 		rnd -= e.Value.(Item).Weight
