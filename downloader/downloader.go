@@ -13,6 +13,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"strconv"
 	"strings"
@@ -62,13 +63,20 @@ func Download(requestInfo *types.HttpRequest) *types.HttpResponse {
 	client.Transport = &transport
 
 	req, err := http.NewRequest(requestInfo.Method, requestInfo.Url, strings.NewReader(requestInfo.PostData))
-	if requestInfo.Method == "POST" {
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	}
 	if err != nil {
 		responseInfo.Error = err
 		return responseInfo
 	}
+	if requestInfo.Method == "POST" {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	trace := &httptrace.ClientTrace{
+		GotConn: func(connInfo httptrace.GotConnInfo) {
+			responseInfo.RemoteAddr = connInfo.Conn.RemoteAddr().String()
+		},
+	}
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+
 	var resp *http.Response
 	resp, err = client.Do(req)
 	if err != nil {

@@ -101,5 +101,6 @@ type HttpResponse struct {
 	StatusCode int
 	Proxy      string
 	Cookies    map[string]string
+	RemoteAddr string
 	Error      error
 }

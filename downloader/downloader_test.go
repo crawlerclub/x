@@ -9,7 +9,7 @@ func TestDownload(t *testing.T) {
 	requestInfo := &types.HttpRequest{
 		Url:      "http://m.newsmth.net",
 		Method:   "GET",
-		UseProxy: true, //false,
+		UseProxy: false,
 		Platform: "mobile",
 	}
 
@@ -18,4 +18,5 @@ func TestDownload(t *testing.T) {
 		t.Error(responseInfo.Error)
 	}
 	t.Log(responseInfo.Text)
+	t.Log(responseInfo.RemoteAddr)
 }
