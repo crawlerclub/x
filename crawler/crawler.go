@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/crawlerclub/x/downloader"
 	"github.com/crawlerclub/x/parser"
 	"github.com/crawlerclub/x/types"
+	"github.com/liuzl/dl"
 	"github.com/liuzl/ds"
 	"github.com/tkuchiki/parsetime"
 	"golang.org/x/net/context"
@@ -102,8 +102,8 @@ func (self *Crawler) Process(
 			return nil, nil, errors.New(
 				fmt.Sprintf("no parser_type %s found!", urlParser.ParserType))
 		}
-		req := &types.HttpRequest{Url: task.Url, Platform: "pc", Timeout: 60}
-		resp := downloader.Download(req)
+		req := &dl.HttpRequest{Url: task.Url, Platform: "pc", Timeout: 60}
+		resp := dl.Download(req)
 		if resp.Error != nil {
 			return nil, nil, resp.Error
 		}

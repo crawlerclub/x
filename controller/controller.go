@@ -3,9 +3,9 @@ package controller
 import (
 	"errors"
 	"github.com/crawlerclub/x/crawler"
-	"github.com/crawlerclub/x/store"
 	"github.com/crawlerclub/x/types"
 	"github.com/golang/glog"
+	"github.com/liuzl/store"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"os"
 	"os/signal"
