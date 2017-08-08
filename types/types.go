@@ -81,26 +81,3 @@ func (conf *CrawlerConf) IsValid() (bool, error) {
 	}
 	return true, nil
 }
-
-type HttpRequest struct {
-	Url      string
-	Method   string
-	PostData string
-	UseProxy bool
-	Proxy    string
-	Timeout  int
-	MaxLen   int64
-	Platform string
-}
-
-type HttpResponse struct {
-	Url        string
-	Text       string
-	Content    []byte
-	Encoding   string
-	StatusCode int
-	Proxy      string
-	Cookies    map[string]string
-	RemoteAddr string
-	Error      error
-}
