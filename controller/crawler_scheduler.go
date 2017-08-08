@@ -3,7 +3,7 @@ package controller
 import (
 	"container/list"
 	"errors"
-	"github.com/crawlerclub/x/ds"
+	"github.com/liuzl/ds"
 	"math/rand"
 	"sync"
 	"time"
