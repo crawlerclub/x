@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+func init() {
+	Parsers["html"] = HtmlParser{"html parser"}
+}
+
 type HtmlParser struct {
 	Name string
 }

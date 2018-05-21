@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+func init() {
+	Parsers["json"] = JsonParser{"json parser"}
+}
+
 type JsonParser struct {
 	Name string
 }
