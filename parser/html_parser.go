@@ -128,7 +128,7 @@ func (parser HtmlParser) parseNode(
 		if len(rule.ItemKey) == 0 {
 			return nil, nil, nil, ErrEmptyItemKey
 		}
-		vals, err := parseNodeByRule(node, rule, pageUrl)
+		vals, err := parser.parseNodeByRule(node, rule, pageUrl)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -214,7 +214,7 @@ func (parser HtmlParser) Parse(
 		if rules, ok = conf[domName]; !ok {
 			continue // no conf for this dom
 		}
-		DOMNodes, urlList, item, err := parseNode(domNode, rules, pageUrl)
+		DOMNodes, urlList, item, err := parser.parseNode(domNode, rules, pageUrl)
 		if err != nil {
 			return nil, nil, err
 		}
